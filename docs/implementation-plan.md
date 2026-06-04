@@ -1914,7 +1914,7 @@ git tag v0.1.0
 - Create: `tests/test_sensor.py`
 - Modify: `custom_components/sunsynk_cloud/__init__.py` — add `"sensor"` to `PLATFORMS`
 
-- [ ] **Step 1: Write sensor tests**
+- [x] **Step 1: Write sensor tests**
 
 ```python
 import pytest
@@ -1979,7 +1979,7 @@ def test_daily_grid_import():
     assert entity.native_value == 36.6
 ```
 
-- [ ] **Step 2: Implement sensor.py**
+- [x] **Step 2: Implement sensor.py**
 
 ```python
 from homeassistant.components.sensor import (
@@ -2097,7 +2097,7 @@ class SunsynkRealtimeSensor(CoordinatorEntity[SunsynkRealtimeCoordinator], Senso
             return None
 ```
 
-- [ ] **Step 3: Update __init__.py PLATFORMS**
+- [x] **Step 3: Update __init__.py PLATFORMS**
 
 Change `PLATFORMS = ["select", "number", "switch"]` to:
 
@@ -2105,13 +2105,13 @@ Change `PLATFORMS = ["select", "number", "switch"]` to:
 PLATFORMS = ["select", "number", "switch", "sensor"]
 ```
 
-- [ ] **Step 4: Run tests**
+- [x] **Step 4: Run tests**
 
 ```bash
 python -m pytest tests/test_sensor.py -v
 ```
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add custom_components/sunsynk_cloud/sensor.py custom_components/sunsynk_cloud/__init__.py tests/test_sensor.py
@@ -2129,7 +2129,7 @@ git commit -m "add realtime sensor entities for power flow and daily energy"
 - Create: `tests/test_time.py`
 - Modify: `custom_components/sunsynk_cloud/__init__.py` — add `"time"` to PLATFORMS
 
-- [ ] **Step 1: Write time entity tests**
+- [x] **Step 1: Write time entity tests**
 
 ```python
 import pytest
@@ -2173,7 +2173,7 @@ async def test_set_time():
     coord.async_write_settings.assert_called_once_with({"sellTime1": "05:30"})
 ```
 
-- [ ] **Step 2: Implement time.py**
+- [x] **Step 2: Implement time.py**
 
 ```python
 from datetime import time
@@ -2240,7 +2240,7 @@ class SunsynkTimeEntity(SunsynkEntity, TimeEntity):
         await self.coordinator.async_write_settings({self._field: time_str})
 ```
 
-- [ ] **Step 3: Add timer numbers and switches to existing definitions**
+- [x] **Step 3: Add timer numbers and switches to existing definitions**
 
 Append to `NUMBER_DEFINITIONS` in `number.py`:
 
@@ -2277,19 +2277,19 @@ for _day, _field in _DAYS:
     )
 ```
 
-- [ ] **Step 4: Update __init__.py PLATFORMS**
+- [x] **Step 4: Update __init__.py PLATFORMS**
 
 ```python
 PLATFORMS = ["select", "number", "switch", "sensor", "time"]
 ```
 
-- [ ] **Step 5: Run all tests**
+- [x] **Step 5: Run all tests**
 
 ```bash
 python -m pytest tests/ -v
 ```
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add custom_components/sunsynk_cloud/time.py custom_components/sunsynk_cloud/number.py custom_components/sunsynk_cloud/switch.py custom_components/sunsynk_cloud/__init__.py tests/test_time.py
@@ -2300,7 +2300,7 @@ git commit -m "add timer slot entities: time pickers, power/SOC numbers, enable/
 
 ### Task 11: Phase 2 Integration Test
 
-- [ ] **Step 1: Deploy to HA and verify all entities**
+- [x] **Step 1: Deploy to HA and verify all entities**
 
 After deploying, check Developer Tools → States and confirm all ~58 entities exist:
 - 12 sensors (power flow + daily energy)
@@ -2310,7 +2310,7 @@ After deploying, check Developer Tools → States and confirm all ~58 entities e
 - 4 main switches + 12 timer switches + 7 day-of-week switches = 23 switches
 - 6 time entities
 
-- [ ] **Step 2: Commit and tag Phase 2**
+- [x] **Step 2: Commit and tag Phase 2**
 
 ```bash
 git add -A
