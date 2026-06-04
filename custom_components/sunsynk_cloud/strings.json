@@ -44,5 +44,83 @@
         }
       }
     }
+  },
+  "entity": {
+    "select": {
+      "work_mode": { "name": "Work Mode" },
+      "energy_mode": { "name": "Energy Mode" }
+    },
+    "number": {
+      "max_sell_power": { "name": "Max Sell Power" },
+      "zero_export_power": { "name": "Zero Export Power" },
+      "grid_charge_soc": { "name": "Grid Charge SOC" },
+      "grid_charge_current": { "name": "Grid Charge Current" },
+      "battery_shutdown_soc": { "name": "Battery Shutdown SOC" },
+      "battery_restart_soc": { "name": "Battery Restart SOC" },
+      "battery_low_soc": { "name": "Battery Low SOC" },
+      "max_charge_current": { "name": "Max Charge Current" },
+      "max_discharge_current": { "name": "Max Discharge Current" },
+      "grid_peak_power": { "name": "Grid Peak Power" },
+      "import_power_limit": { "name": "Import Power Limit" },
+      "ac_output_power_limit": { "name": "AC Output Power Limit" },
+      "timer_1_power": { "name": "Timer 1 Power" },
+      "timer_1_soc": { "name": "Timer 1 SOC" },
+      "timer_2_power": { "name": "Timer 2 Power" },
+      "timer_2_soc": { "name": "Timer 2 SOC" },
+      "timer_3_power": { "name": "Timer 3 Power" },
+      "timer_3_soc": { "name": "Timer 3 SOC" },
+      "timer_4_power": { "name": "Timer 4 Power" },
+      "timer_4_soc": { "name": "Timer 4 SOC" },
+      "timer_5_power": { "name": "Timer 5 Power" },
+      "timer_5_soc": { "name": "Timer 5 SOC" },
+      "timer_6_power": { "name": "Timer 6 Power" },
+      "timer_6_soc": { "name": "Timer 6 SOC" }
+    },
+    "switch": {
+      "solar_sell": { "name": "Solar Sell" },
+      "grid_charge": { "name": "Grid Charge" },
+      "peak_and_valley": { "name": "Peak and Valley" },
+      "grid_peak_shaving": { "name": "Grid Peak Shaving" },
+      "timer_1_enable": { "name": "Timer 1 Enable" },
+      "timer_1_grid_charge": { "name": "Timer 1 Grid Charge" },
+      "timer_2_enable": { "name": "Timer 2 Enable" },
+      "timer_2_grid_charge": { "name": "Timer 2 Grid Charge" },
+      "timer_3_enable": { "name": "Timer 3 Enable" },
+      "timer_3_grid_charge": { "name": "Timer 3 Grid Charge" },
+      "timer_4_enable": { "name": "Timer 4 Enable" },
+      "timer_4_grid_charge": { "name": "Timer 4 Grid Charge" },
+      "timer_5_enable": { "name": "Timer 5 Enable" },
+      "timer_5_grid_charge": { "name": "Timer 5 Grid Charge" },
+      "timer_6_enable": { "name": "Timer 6 Enable" },
+      "timer_6_grid_charge": { "name": "Timer 6 Grid Charge" },
+      "schedule_monday": { "name": "Schedule Monday" },
+      "schedule_tuesday": { "name": "Schedule Tuesday" },
+      "schedule_wednesday": { "name": "Schedule Wednesday" },
+      "schedule_thursday": { "name": "Schedule Thursday" },
+      "schedule_friday": { "name": "Schedule Friday" },
+      "schedule_saturday": { "name": "Schedule Saturday" },
+      "schedule_sunday": { "name": "Schedule Sunday" }
+    },
+    "time": {
+      "timer_1_end_time": { "name": "Timer 1 End Time" },
+      "timer_2_end_time": { "name": "Timer 2 End Time" },
+      "timer_3_end_time": { "name": "Timer 3 End Time" },
+      "timer_4_end_time": { "name": "Timer 4 End Time" },
+      "timer_5_end_time": { "name": "Timer 5 End Time" },
+      "timer_6_end_time": { "name": "Timer 6 End Time" }
+    },
+    "sensor": {
+      "pv_power": { "name": "PV Power" },
+      "battery_power": { "name": "Battery Power" },
+      "battery_soc": { "name": "Battery SOC" },
+      "grid_power": { "name": "Grid Power" },
+      "load_power": { "name": "Load Power" },
+      "daily_pv_generation": { "name": "Daily PV Generation" },
+      "daily_grid_import": { "name": "Daily Grid Import" },
+      "daily_grid_export": { "name": "Daily Grid Export" },
+      "daily_battery_charge": { "name": "Daily Battery Charge" },
+      "daily_battery_discharge": { "name": "Daily Battery Discharge" },
+      "daily_load_consumption": { "name": "Daily Load Consumption" }
+    }
   }
 }
