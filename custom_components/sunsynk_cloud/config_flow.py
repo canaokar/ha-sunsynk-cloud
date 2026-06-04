@@ -16,6 +16,9 @@ from .api import SunsynkApi, AuthError
 from .const import (
     DOMAIN,
     CONF_INVERTER_SNS,
+    CONF_BATTERY_POWER_ENTITY,
+    CONF_BATTERY_SOC_ENTITY,
+    CONF_BATTERY_CAPACITY_OVERRIDE,
     DEFAULT_SETTINGS_INTERVAL,
     DEFAULT_REALTIME_INTERVAL,
 )
@@ -177,5 +180,17 @@ class SunsynkCloudOptionsFlow(OptionsFlow):
                     "enable_realtime",
                     default=current.get("enable_realtime", True),
                 ): bool,
+                vol.Optional(
+                    CONF_BATTERY_POWER_ENTITY,
+                    description={"suggested_value": current.get(CONF_BATTERY_POWER_ENTITY, "")},
+                ): str,
+                vol.Optional(
+                    CONF_BATTERY_SOC_ENTITY,
+                    description={"suggested_value": current.get(CONF_BATTERY_SOC_ENTITY, "")},
+                ): str,
+                vol.Optional(
+                    CONF_BATTERY_CAPACITY_OVERRIDE,
+                    description={"suggested_value": current.get(CONF_BATTERY_CAPACITY_OVERRIDE, "")},
+                ): str,
             }),
         )

@@ -40,7 +40,10 @@
         "data": {
           "settings_interval": "Settings poll interval (seconds)",
           "realtime_interval": "Realtime poll interval (seconds)",
-          "enable_realtime": "Enable realtime sensors"
+          "enable_realtime": "Enable realtime sensors",
+          "battery_power_entity": "Battery power entity (e.g. kellerza sensor, leave empty for cloud)",
+          "battery_soc_entity": "Battery SOC entity (e.g. kellerza sensor, leave empty for cloud)",
+          "battery_capacity_kwh": "Battery capacity override (kWh, leave empty for auto-detect)"
         }
       }
     }
@@ -120,7 +123,8 @@
       "daily_grid_export": { "name": "Daily Grid Export" },
       "daily_battery_charge": { "name": "Daily Battery Charge" },
       "daily_battery_discharge": { "name": "Daily Battery Discharge" },
-      "daily_load_consumption": { "name": "Daily Load Consumption" }
+      "daily_load_consumption": { "name": "Daily Load Consumption" },
+      "battery_time_remaining": { "name": "Battery Time Remaining" }
     }
   }
 }

@@ -43,6 +43,10 @@ BATTERY_SETTINGS = frozenset({
     "floatVolt", "absorptionVolt", "chargeCurrent", "dischargeCurrent",
 })
 
+CONF_BATTERY_POWER_ENTITY = "battery_power_entity"
+CONF_BATTERY_SOC_ENTITY = "battery_soc_entity"
+CONF_BATTERY_CAPACITY_OVERRIDE = "battery_capacity_kwh"
+
 GRID_CHARGE_SETTINGS = frozenset({
     "sdChargeOn", "sdStartCap", "sdBatteryCurrent", "sdStartVolt",
     "gridSignal", "gridAlwaysOn",
