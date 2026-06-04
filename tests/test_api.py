@@ -143,6 +143,53 @@ async def test_auto_reauth_on_401(api):
 
 
 @pytest.mark.asyncio
+async def test_request_with_retry_succeeds_on_second_attempt(api):
+    api._access_token = "tok_123"
+    call_count = 0
+
+    async def mock_post(url, **kwargs):
+        nonlocal call_count
+        resp = AsyncMock()
+        call_count += 1
+        if call_count == 1:
+            resp.status = 200
+            resp.json = AsyncMock(return_value={
+                "code": 500, "success": False, "msg": "Internal error",
+            })
+        else:
+            resp.status = 200
+            resp.json = AsyncMock(return_value={
+                "code": 0, "success": True, "data": None,
+            })
+        return resp
+
+    api._session.post = mock_post
+
+    result = await api.post_settings("2601120338", {"solarSell": "0"})
+    assert result is True
+    assert call_count == 2
+
+
+@pytest.mark.asyncio
+async def test_request_with_retry_raises_after_all_attempts(api):
+    api._access_token = "tok_123"
+
+    async def mock_post(url, **kwargs):
+        resp = AsyncMock()
+        resp.status = 200
+        resp.json = AsyncMock(return_value={
+            "code": 500, "success": False, "msg": "Internal error",
+        })
+        return resp
+
+    api._session.post = mock_post
+
+    from custom_components.sunsynk_cloud.api import ApiError
+    with pytest.raises(ApiError):
+        await api.post_settings("2601120338", {"solarSell": "0"})
+
+
+@pytest.mark.asyncio
 async def test_post_settings_categorises_battery_fields(api):
     api._access_token = "tok_123"
     mock_resp = AsyncMock()

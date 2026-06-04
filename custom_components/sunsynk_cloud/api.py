@@ -1,3 +1,4 @@
+import asyncio
 import base64
 import hashlib
 import logging
@@ -11,6 +12,9 @@ from cryptography.hazmat.primitives.serialization import load_der_public_key
 from .const import BASE_URL, SOURCE, BATTERY_SETTINGS, GRID_CHARGE_SETTINGS
 
 _LOGGER = logging.getLogger(__name__)
+
+MAX_RETRIES = 3
+RETRY_DELAYS = [4, 8, 16]
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0",
@@ -120,6 +124,23 @@ class SunsynkApi:
             raise ApiError(f"API error {data.get('code')}: {data.get('msg')}")
         return data.get("data", {}) or {}
 
+    async def _request_with_retry(
+        self, method: str, path: str, **kwargs
+    ) -> dict[str, Any]:
+        last_error = None
+        for attempt in range(MAX_RETRIES):
+            try:
+                return await self._request(method, path, **kwargs)
+            except ApiError as err:
+                last_error = err
+                _LOGGER.warning(
+                    "API request failed (attempt %d/%d): %s",
+                    attempt + 1, MAX_RETRIES, err,
+                )
+                if attempt < MAX_RETRIES - 1:
+                    await asyncio.sleep(RETRY_DELAYS[attempt])
+        raise last_error
+
     async def get_plants(self) -> list[dict]:
         data = await self._request("get", "/api/v1/plants?page=1&limit=100")
         return data.get("infos", [])
@@ -175,5 +196,5 @@ class SunsynkApi:
         for group in [system_fields, battery_fields, grid_charge_fields]:
             if group:
                 group["sn"] = sn
-                await self._request("post", url, json=group)
+                await self._request_with_retry("post", url, json=group)
         return True

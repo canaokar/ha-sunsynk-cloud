@@ -28,7 +28,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         await api.authenticate(entry.data["username"], entry.data["password"])
     except AuthError as err:
         await session.close()
-        raise ConfigEntryAuthFailed from err
+        raise ConfigEntryAuthFailed(
+            "Login failed — check credentials"
+        ) from err
 
     settings_interval = timedelta(
         seconds=entry.options.get("settings_interval", DEFAULT_SETTINGS_INTERVAL)
