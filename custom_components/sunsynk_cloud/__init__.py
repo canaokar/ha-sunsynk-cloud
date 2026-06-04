@@ -17,7 +17,7 @@ from .coordinator import SunsynkSettingsCoordinator, SunsynkRealtimeCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
-PLATFORMS = ["select", "number", "switch"]
+PLATFORMS = ["select", "number", "switch", "sensor", "time"]
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:

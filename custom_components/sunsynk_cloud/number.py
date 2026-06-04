@@ -22,6 +22,14 @@ NUMBER_DEFINITIONS = [
     {"key": "ac_output_power_limit", "field": "acOutputPowerLimit", "min_value": 0, "max_value": 15000, "step": 100, "unit": "W", "icon": "mdi:power-plug"},
 ]
 
+for _n in range(1, 7):
+    NUMBER_DEFINITIONS.append(
+        {"key": f"timer_{_n}_power", "field": f"sellTime{_n}Pac", "min_value": 0, "max_value": 10000, "step": 100, "unit": "W", "icon": "mdi:flash"}
+    )
+    NUMBER_DEFINITIONS.append(
+        {"key": f"timer_{_n}_soc", "field": f"cap{_n}", "min_value": 0, "max_value": 100, "step": 1, "unit": "%", "icon": "mdi:battery-charging-outline"}
+    )
+
 
 async def async_setup_entry(
     hass: HomeAssistant,

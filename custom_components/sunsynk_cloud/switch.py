@@ -16,6 +16,25 @@ SWITCH_DEFINITIONS = [
     {"key": "grid_peak_shaving", "field": "gridPeakShaving", "on_value": "1", "off_value": "0", "icon": "mdi:chart-bell-curve-cumulative"},
 ]
 
+for _n in range(1, 7):
+    SWITCH_DEFINITIONS.append(
+        {"key": f"timer_{_n}_enable", "field": f"sellTime{_n}En", "on_value": "1", "off_value": "0", "icon": "mdi:timer"}
+    )
+    SWITCH_DEFINITIONS.append(
+        {"key": f"timer_{_n}_grid_charge", "field": f"time{_n}on", "on_value": "true", "off_value": "false", "icon": "mdi:battery-charging"}
+    )
+
+_DAYS = [
+    ("monday", "mondayOn"), ("tuesday", "tuesdayOn"),
+    ("wednesday", "wednesdayOn"), ("thursday", "thursdayOn"),
+    ("friday", "fridayOn"), ("saturday", "saturdayOn"),
+    ("sunday", "sundayOn"),
+]
+for _day, _field in _DAYS:
+    SWITCH_DEFINITIONS.append(
+        {"key": f"schedule_{_day}", "field": _field, "on_value": "true", "off_value": "false", "icon": "mdi:calendar"}
+    )
+
 
 async def async_setup_entry(
     hass: HomeAssistant,
