@@ -1,0 +1,5609 @@
+openapi: 3.0.3
+info:
+  title: Sunsynk Cloud API
+  description: |
+    Reverse-engineered API specification for the Sunsynk/Deye cloud platform (https://www.sunsynk.net).
+    Extracted from the web application JavaScript bundles and validated against live API responses.
+
+    **Base URL:** `https://api.sunsynk.net`
+
+    **Authentication:** RSA-encrypted password flow via `/oauth/token/new`. All authenticated
+    endpoints require `Authorization: Bearer <access_token>` header.
+
+    **Rate Limiting:** Community convention is minimum 60-second polling interval.
+
+    **Settings Write Safety:** Battery settings and system mode settings must be sent in separate
+    POST requests. Never mix them in a single call.
+
+    **Inverter Types & Setting Endpoints:**
+    - Type 2 (Hybrid/Deye): Uses `common/setting/{sn}/read` and `common/setting/{sn}/set`
+    - Grid-Tied (GY): Uses `gy/setting/{sn}/read` and individual POST endpoints
+    - Micro/String (MT): Uses `mt/setting/{sn}/read` and individual POST endpoints
+    - SiDaoEr brand: Uses `setting/sidaoer/{sn}/read` and individual POST endpoints
+    - UNEET brand: Uses `setting/uneet/{sn}/read` and individual POST endpoints
+    - Sunsynk Store Single Phase: Uses `sunsynk/store/singlePhase/{sn}/read` and setting/* endpoints
+    - Sunsynk Store Three Phase: Uses `sunsynk/store/threePhase/{sn}/read` and setting/* endpoints
+  version: 1.0.0
+  contact:
+    name: Extracted from sunsynk.net web app
+  license:
+    name: For personal use only
+
+servers:
+  - url: https://api.sunsynk.net
+    description: Sunsynk Cloud API (primary)
+  - url: https://api.solarkcloud.com
+    description: SolArk Cloud API (same backend, SolArk-branded inverters)
+
+tags:
+  - name: Authentication
+    description: Login, token refresh, account management
+  - name: User
+    description: User profile and preferences
+  - name: Plants
+    description: Plant/station management and overview
+  - name: Inverters
+    description: Inverter listing and details
+  - name: Realtime Data
+    description: Live power flow, PV, grid, battery, load data
+  - name: Historical Data
+    description: Day/month/year/total energy charts
+  - name: Settings Read
+    description: Read inverter configuration (safe, GET only)
+  - name: Settings Write
+    description: Write inverter configuration (CAUTION - changes live system)
+  - name: Settings Write - GY (Grid-Tied)
+    description: Settings for grid-tied inverters
+  - name: Settings Write - MT (Micro/String)
+    description: Settings for micro/string inverters
+  - name: Settings Write - Sunsynk Store Single Phase
+    description: Settings for Sunsynk Store single-phase inverters
+  - name: Settings Write - Sunsynk Store Three Phase
+    description: Settings for Sunsynk Store three-phase inverters
+  - name: Settings Write - SiDaoEr
+    description: Settings for SiDaoEr brand inverters
+  - name: Events
+    description: Alarms, faults, and event history
+  - name: Gateway
+    description: Data logger/gateway management
+  - name: Battery
+    description: Battery pack information and events
+  - name: Meter
+    description: Energy meter data
+  - name: AC Switch
+    description: AC smart switch control
+  - name: Charge Pile
+    description: EV charge pile management
+  - name: Smart Rules
+    description: Automation rules and smart scheduling
+  - name: Firmware
+    description: Firmware management and upgrades
+  - name: Dictionary
+    description: Reference data (timezones, currencies, etc.)
+  - name: Weather
+    description: Weather and meteorological data
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Obtained via /oauth/token/new RSA-encrypted login flow
+
+  schemas:
+    ApiResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+          description: "0 = success, 2 = no permissions, 400 = bad request, 500 = server error"
+        msg:
+          type: string
+        data:
+          type: object
+        success:
+          type: boolean
+
+    TokenResponse:
+      type: object
+      properties:
+        access_token:
+          type: string
+          description: JWT bearer token
+        refresh_token:
+          type: string
+        scope:
+          type: string
+          example: "all"
+        token_type:
+          type: string
+          example: "Bearer"
+        expires_in:
+          type: integer
+          description: Token TTL in seconds (typically 604799 = ~7 days)
+          example: 604799
+
+    UserInfo:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 454113
+        nickname:
+          type: string
+        avatar:
+          type: string
+          format: uri
+        gender:
+          type: integer
+        mobile:
+          type: string
+          nullable: true
+        createAt:
+          type: string
+          format: date-time
+        type:
+          type: string
+          nullable: true
+        tempUnit:
+          type: string
+          example: "℃"
+        company:
+          type: object
+          nullable: true
+        userSrc:
+          type: string
+          example: "sunsynk"
+
+    UserPersonalized:
+      type: object
+      properties:
+        tempUnit:
+          type: integer
+        lanWeb:
+          type: string
+          example: "en"
+        alertEmail:
+          type: string
+          format: email
+        emailEnable:
+          type: integer
+
+    PlantInfo:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 537602
+        name:
+          type: string
+        thumbUrl:
+          type: string
+          format: uri
+        status:
+          type: integer
+          description: "1 = online"
+        address:
+          type: string
+        pac:
+          type: integer
+          description: Current power (W)
+        efficiency:
+          type: number
+        etoday:
+          type: number
+          description: Today's energy (kWh)
+        etotal:
+          type: number
+          description: Total energy (kWh)
+        updateAt:
+          type: string
+          format: date-time
+        createAt:
+          type: string
+          format: date-time
+        type:
+          type: integer
+          description: "2 = hybrid"
+        masterId:
+          type: integer
+        share:
+          type: boolean
+        plantPermission:
+          type: array
+          items:
+            type: string
+          description: List of permission strings the current user has
+        existCamera:
+          type: boolean
+        email:
+          type: string
+        phone:
+          type: string
+          nullable: true
+        productWarrantyRegistered:
+          type: integer
+
+    PlantRealtime:
+      type: object
+      properties:
+        pac:
+          type: integer
+          description: Current PV power (W)
+        efficiency:
+          type: number
+        etoday:
+          type: number
+          description: Today's energy (kWh)
+        emonth:
+          type: number
+        eyear:
+          type: number
+        etotal:
+          type: number
+        totalPower:
+          type: number
+          description: Total installed capacity (kW)
+        currency:
+          type: object
+          properties:
+            id:
+              type: integer
+            code:
+              type: string
+              example: "GBP"
+            text:
+              type: string
+              example: "£"
+        invest:
+          type: number
+        income:
+          type: number
+        updateAt:
+          type: string
+          format: date-time
+
+    InverterInfo:
+      type: object
+      properties:
+        id:
+          type: integer
+        sn:
+          type: string
+          description: Inverter serial number (primary identifier)
+          example: "2601120338"
+        alias:
+          type: string
+        gsn:
+          type: string
+          description: Gateway serial number
+        status:
+          type: integer
+          description: "1 = online"
+        type:
+          type: integer
+          description: "2 = hybrid"
+        commTypeName:
+          type: string
+          example: "RS485"
+        custCode:
+          type: integer
+        version:
+          $ref: '#/components/schemas/InverterVersion'
+        model:
+          type: string
+        equipMode:
+          type: string
+          nullable: true
+        pac:
+          type: integer
+          description: Current power (W)
+        etoday:
+          type: number
+        etotal:
+          type: number
+        updateAt:
+          type: string
+          format: date-time
+        opened:
+          type: integer
+        plant:
+          type: object
+          properties:
+            id:
+              type: integer
+            name:
+              type: string
+            type:
+              type: integer
+        sunsynkEquip:
+          type: boolean
+        protocolIdentifier:
+          type: string
+        equipType:
+          type: integer
+        ratePower:
+          type: integer
+          description: Rated power in watts
+        brand:
+          type: string
+          example: "Deye"
+        pvNum:
+          type: integer
+          description: Number of PV string inputs
+
+    InverterVersion:
+      type: object
+      properties:
+        masterVer:
+          type: string
+        softVer:
+          type: string
+        hardVer:
+          type: string
+        hmiVer:
+          type: string
+        bmsVer:
+          type: string
+        commVer:
+          type: string
+          nullable: true
+        arcPullingVersion:
+          type: string
+          nullable: true
+
+    FlowData:
+      type: object
+      description: Complete energy flow snapshot
+      properties:
+        custCode:
+          type: integer
+        protocolIdentifier:
+          type: string
+        pvPower:
+          type: integer
+          description: Total PV power (W)
+        battPower:
+          type: integer
+          description: Battery power (W, positive = discharging)
+        battPower2:
+          type: integer
+          description: Second battery pack power
+        gridOrMeterPower:
+          type: integer
+          description: Grid power (W, negative = exporting)
+        loadOrEpsPower:
+          type: integer
+          description: Total load power (W)
+        genPower:
+          type: integer
+          description: Generator power (W)
+        minPower:
+          type: integer
+          description: Micro inverter power (W)
+        soc:
+          type: number
+          description: Battery state of charge (%)
+        smartLoadPower:
+          type: integer
+        upsLoadPower:
+          type: integer
+        homeLoadPower:
+          type: integer
+        chargePilePower:
+          type: integer
+        pvTo:
+          type: boolean
+          description: PV producing
+        toLoad:
+          type: boolean
+        toSmartLoad:
+          type: boolean
+        toUpsLoad:
+          type: boolean
+        toHomeLoad:
+          type: boolean
+        toGrid:
+          type: boolean
+          description: Exporting to grid
+        toBat:
+          type: boolean
+          description: Charging battery
+        batTo:
+          type: boolean
+          description: Battery discharging
+        gridTo:
+          type: boolean
+          description: Importing from grid
+        genTo:
+          type: boolean
+        minTo:
+          type: boolean
+        toChargePile:
+          type: boolean
+        existsGen:
+          type: boolean
+        existsMin:
+          type: boolean
+        existsGrid:
+          type: boolean
+        genOn:
+          type: boolean
+        microOn:
+          type: boolean
+        existsMeter:
+          type: boolean
+        bmsCommFaultFlag:
+          type: boolean
+          nullable: true
+        existsThreeLoad:
+          type: boolean
+        existsSmartLoad:
+          type: boolean
+        existsChargePile:
+          type: boolean
+        pv:
+          type: array
+          nullable: true
+          items:
+            type: object
+            properties:
+              power:
+                type: integer
+              toInv:
+                type: boolean
+        existThinkPower:
+          type: boolean
+
+    PVRealtimeInput:
+      type: object
+      properties:
+        pac:
+          type: integer
+          description: Total PV power (W)
+        grid_tip_power:
+          type: integer
+          nullable: true
+        pvIV:
+          type: array
+          items:
+            type: object
+            properties:
+              pvNo:
+                type: integer
+              vpv:
+                type: string
+                description: PV voltage (V)
+              ipv:
+                type: string
+                description: PV current (A)
+              ppv:
+                type: string
+                description: PV power (W)
+              todayPv:
+                type: string
+              sn:
+                type: string
+              time:
+                type: string
+        mpptIV:
+          type: array
+          items:
+            type: object
+        etoday:
+          type: number
+        etotal:
+          type: number
+
+    RealtimeOutput:
+      type: object
+      properties:
+        vip:
+          type: array
+          items:
+            $ref: '#/components/schemas/VoltCurrentPower'
+        pInv:
+          type: integer
+          description: Inverter power (W)
+        pac:
+          type: integer
+          description: AC output power (W)
+        fac:
+          type: number
+          description: AC frequency (Hz)
+
+    GridRealtime:
+      type: object
+      properties:
+        vip:
+          type: array
+          items:
+            $ref: '#/components/schemas/VoltCurrentPower'
+        pac:
+          type: integer
+          description: Grid power (W, negative = exporting)
+        qac:
+          type: integer
+          description: Reactive power
+        fac:
+          type: number
+          description: Grid frequency (Hz)
+        pf:
+          type: number
+          description: Power factor
+        status:
+          type: integer
+        acRealyStatus:
+          type: integer
+          description: "1 = grid relay connected"
+        etodayFrom:
+          type: string
+          description: Today's grid import (kWh)
+        etodayTo:
+          type: string
+          description: Today's grid export (kWh)
+        etotalFrom:
+          type: string
+          description: Total grid import (kWh)
+        etotalTo:
+          type: string
+          description: Total grid export (kWh)
+        limiterPowerArr:
+          type: array
+          items:
+            type: integer
+        limiterTotalPower:
+          type: integer
+
+    BatteryRealtime:
+      type: object
+      properties:
+        etodayChg:
+          type: string
+          description: Today's charge energy (kWh)
+        etodayDischg:
+          type: string
+          description: Today's discharge energy (kWh)
+        emonthChg:
+          type: string
+        emonthDischg:
+          type: string
+        eyearChg:
+          type: string
+        eyearDischg:
+          type: string
+        etotalChg:
+          type: string
+        etotalDischg:
+          type: string
+        type:
+          type: integer
+          description: Battery type
+        power:
+          type: integer
+          description: Battery power (W, positive = discharging)
+        capacity:
+          type: string
+          description: Battery capacity (Ah)
+        correctCap:
+          type: integer
+        bmsSoc:
+          type: number
+          description: BMS-reported SOC (%)
+        bmsVolt:
+          type: number
+          description: BMS voltage (V)
+        bmsCurrent:
+          type: number
+          description: BMS current (A, negative = charging)
+        bmsTemp:
+          type: number
+          description: BMS temperature (°C)
+        current:
+          type: number
+        voltage:
+          type: string
+        temp:
+          type: string
+        soc:
+          type: string
+          description: Inverter-reported SOC (%)
+        chargeVolt:
+          type: number
+          description: Charge voltage limit (V)
+        dischargeVolt:
+          type: number
+        chargeCurrentLimit:
+          type: number
+        dischargeCurrentLimit:
+          type: number
+        maxChargeCurrentLimit:
+          type: number
+        maxDischargeCurrentLimit:
+          type: number
+        status:
+          type: integer
+          description: "2 = discharging"
+        numberOfBatteries:
+          type: integer
+          nullable: true
+
+    LoadRealtime:
+      type: object
+      properties:
+        totalUsed:
+          type: number
+          description: Total energy consumed (kWh)
+        dailyUsed:
+          type: number
+          description: Today's consumption (kWh)
+        vip:
+          type: array
+          items:
+            $ref: '#/components/schemas/VoltCurrentPower'
+        totalPower:
+          type: integer
+          description: Current load power (W)
+        smartLoadStatus:
+          type: integer
+        loadFac:
+          type: number
+        upsPowerL1:
+          type: number
+        upsPowerL2:
+          type: number
+        upsPowerL3:
+          type: number
+        upsPowerTotal:
+          type: number
+
+    EpsRealtime:
+      type: object
+      properties:
+        vr:
+          type: number
+        ir:
+          type: number
+        qr:
+          type: integer
+        pr:
+          type: integer
+        vs:
+          type: number
+        is:
+          type: number
+        qs:
+          type: integer
+        ps:
+          type: integer
+        vt:
+          type: number
+        it:
+          type: number
+        qt:
+          type: integer
+        pt:
+          type: integer
+        pac:
+          type: integer
+        etoday:
+          type: number
+        etotal:
+          type: number
+
+    GenRealtime:
+      type: object
+      properties:
+        genTotal:
+          type: number
+        genDaily:
+          type: number
+        totalPower:
+          type: integer
+        genFac:
+          type: number
+        vip:
+          type: array
+          items:
+            $ref: '#/components/schemas/VoltCurrentPower'
+
+    VoltCurrentPower:
+      type: object
+      properties:
+        volt:
+          type: string
+        current:
+          type: string
+        power:
+          type: integer
+
+    EnergyChartData:
+      type: object
+      properties:
+        infos:
+          type: array
+          items:
+            type: object
+            properties:
+              unit:
+                type: string
+                description: "W for day power charts, kWh for energy charts, kW for EMS"
+              records:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    time:
+                      type: string
+                      description: "HH:MM for day, YYYY-MM-DD for month, MM for year, YYYY for total"
+                    value:
+                      type: string
+                    updateTime:
+                      type: string
+                      nullable: true
+              label:
+                type: string
+                description: "e.g. 'PV Generation', 'Load Power Consumption'"
+              name:
+                type: string
+              sn:
+                type: string
+                nullable: true
+
+    GenerationUse:
+      type: object
+      properties:
+        load:
+          type: number
+          description: Load consumption (kWh)
+        pv:
+          type: number
+          description: PV generation (kWh)
+        batteryCharge:
+          type: number
+          description: Battery charge (kWh)
+        gridSell:
+          type: number
+          description: Grid export (kWh)
+
+    GatewayInfo:
+      type: object
+      properties:
+        id:
+          type: integer
+        sn:
+          type: string
+        key:
+          type: string
+        alias:
+          type: string
+          nullable: true
+        status:
+          type: integer
+          description: "2 = online"
+        softVer:
+          type: string
+        hardVer:
+          type: string
+        lldt:
+          type: string
+          format: date-time
+          description: Last login date time
+        llip:
+          type: string
+          description: Last login IP
+        signal:
+          type: integer
+        model:
+          type: string
+        commType:
+          type: integer
+        commTypeName:
+          type: string
+        plant:
+          type: object
+          properties:
+            id:
+              type: integer
+            name:
+              type: string
+            type:
+              type: integer
+            master:
+              type: string
+        devImgPath:
+          type: array
+          items:
+            type: string
+        connPassword:
+          type: string
+        bleCheck:
+          type: integer
+
+    CommonSettings:
+      type: object
+      description: |
+        Complete inverter settings object. All values are returned as strings.
+        When writing, you only need to send the fields you want to change.
+        IMPORTANT: Do not mix battery settings with system mode settings in a single POST.
+      properties:
+        sn:
+          type: string
+        sysWorkMode:
+          type: string
+          description: "0=Selling First, 1=Zero-Export+Limit to Load, 2=Limited to Home"
+        energyMode:
+          type: string
+          description: "0=Battery First, 1=Load First"
+        peakAndVallery:
+          type: string
+          description: "0=off, 1=on (timer/schedule mode)"
+        pvMaxLimit:
+          type: string
+          description: Max PV power limit (W)
+        solarSell:
+          type: string
+          description: "0=off, 1=on (solar export)"
+        zeroExportPower:
+          type: string
+          description: Grid trickle feed threshold (W)
+        solarMaxSellPower:
+          type: string
+          description: Maximum solar selling power (W)
+        loadMode:
+          type: string
+          description: Smart load mode
+        sellTime1:
+          type: string
+          description: "Time slot 1 end time (HH:MM)"
+          example: "00:00"
+        sellTime2:
+          type: string
+          example: "06:00"
+        sellTime3:
+          type: string
+          example: "11:00"
+        sellTime4:
+          type: string
+          example: "16:00"
+        sellTime5:
+          type: string
+          example: "21:00"
+        sellTime6:
+          type: string
+          example: "23:00"
+        sellTime1Pac:
+          type: string
+          description: Slot 1 power limit (W)
+        sellTime2Pac:
+          type: string
+        sellTime3Pac:
+          type: string
+        sellTime4Pac:
+          type: string
+        sellTime5Pac:
+          type: string
+        sellTime6Pac:
+          type: string
+        sellTime1Volt:
+          type: string
+          description: Slot 1 voltage threshold
+        sellTime2Volt:
+          type: string
+        sellTime3Volt:
+          type: string
+        sellTime4Volt:
+          type: string
+        sellTime5Volt:
+          type: string
+        sellTime6Volt:
+          type: string
+        sellTime1En:
+          type: string
+          description: "Slot 1 enable (0/1)"
+        sellTime2En:
+          type: string
+        sellTime3En:
+          type: string
+        sellTime4En:
+          type: string
+        sellTime5En:
+          type: string
+        sellTime6En:
+          type: string
+        cap1:
+          type: string
+          description: Slot 1 target battery SOC (%)
+          example: "100"
+        cap2:
+          type: string
+        cap3:
+          type: string
+        cap4:
+          type: string
+        cap5:
+          type: string
+        cap6:
+          type: string
+        time1on:
+          type: string
+          description: "Slot 1 grid charge enable (true/false)"
+        time2on:
+          type: string
+        time3on:
+          type: string
+        time4on:
+          type: string
+        time5on:
+          type: string
+        time6on:
+          type: string
+        time1On:
+          type: string
+          description: "Slot 1 alternative enable flag (bitmask: 1=grid charge, 64=gen charge)"
+        time2On:
+          type: string
+        time3On:
+          type: string
+        time4On:
+          type: string
+        time5On:
+          type: string
+        time6On:
+          type: string
+        genTime1on:
+          type: string
+          description: "Slot 1 generator charge enable (true/false)"
+        genTime2on:
+          type: string
+        genTime3on:
+          type: string
+        genTime4on:
+          type: string
+        genTime5on:
+          type: string
+        genTime6on:
+          type: string
+        mondayOn:
+          type: string
+          description: "Schedule active on Monday (true/false)"
+        tuesdayOn:
+          type: string
+        wednesdayOn:
+          type: string
+        thursdayOn:
+          type: string
+        fridayOn:
+          type: string
+        saturdayOn:
+          type: string
+        sundayOn:
+          type: string
+        battMode:
+          type: string
+          description: Battery type (-1 = auto/lithium)
+        batteryCap:
+          type: string
+          description: Battery capacity (Ah)
+          example: "628"
+        batteryMaxCurrentCharge:
+          type: string
+          description: Max charge current (A)
+        batteryMaxCurrentDischarge:
+          type: string
+          description: Max discharge current (A)
+        batteryShutdownCap:
+          type: string
+          description: Shutdown SOC (%)
+        batteryRestartCap:
+          type: string
+          description: Restart SOC (%)
+        batteryLowCap:
+          type: string
+          description: Low battery warning SOC (%)
+        batteryOn:
+          type: string
+          description: "Battery activation (0/1)"
+        batteryEmptyV:
+          type: string
+          description: Battery empty voltage (V)
+        batteryEmptyVolt:
+          type: string
+        batteryLowVolt:
+          type: string
+        batteryShutdownVolt:
+          type: string
+        batteryRestartVolt:
+          type: string
+        batteryImpedance:
+          type: string
+        batteryEfficiency:
+          type: string
+        lithiumMode:
+          type: string
+          description: "Lithium protocol (0=auto)"
+        bmsErrStop:
+          type: string
+          description: "Stop on BMS error (0/1)"
+        lowPowerMode:
+          type: string
+        disableFloatCharge:
+          type: string
+        lowNoiseMode:
+          type: string
+        chargeVolt:
+          type: string
+          description: Charge voltage (V)
+        floatVolt:
+          type: string
+          description: Float charge voltage (V)
+        absorptionVolt:
+          type: string
+        chargeCurrent:
+          type: string
+        chargeCurrentLimit:
+          type: string
+        dischargeCurrent:
+          type: string
+        dischargeCurrentLimit:
+          type: string
+        chargeLimit:
+          type: string
+        dischargeLimit:
+          type: string
+        sdChargeOn:
+          type: string
+          description: "Grid charging master enable (0/1)"
+        sdStartCap:
+          type: string
+          description: Grid charge start SOC (%)
+        sdBatteryCurrent:
+          type: string
+          description: Grid charge current (A)
+        sdStartVolt:
+          type: string
+        gridSignal:
+          type: string
+        gridAlwaysOn:
+          type: string
+        gridPeakShaving:
+          type: string
+        gridPeakPower:
+          type: string
+        gridMode:
+          type: string
+        genChargeOn:
+          type: string
+        genSignal:
+          type: string
+        generatorForcedStart:
+          type: string
+        genPeakShaving:
+          type: string
+        genPeakPower:
+          type: string
+        genOnCap:
+          type: string
+        genOffCap:
+          type: string
+        genConnectGrid:
+          type: string
+        genMinSolar:
+          type: string
+        generatorStartCap:
+          type: string
+        generatorStartVolt:
+          type: string
+        generatorBatteryCurrent:
+          type: string
+        genCoolingTime:
+          type: string
+        maxOperatingTimeOfGen:
+          type: string
+        genOnVolt:
+          type: string
+        genOffVolt:
+          type: string
+        genToLoad:
+          type: string
+        genToLoadOn:
+          type: string
+        acCoupleOnLoadSideEnable:
+          type: string
+        acCoupleOnGridSideEnable:
+          type: string
+        offGridImmediatelyOff:
+          type: string
+        acCoupleFreqUpper:
+          type: string
+        safetyType:
+          type: string
+        parallel:
+          type: string
+        equipMode:
+          type: string
+          description: "1 = master"
+        modbusSn:
+          type: string
+        phase:
+          type: string
+        externalCtRatio:
+          type: string
+        meterSelect:
+          type: string
+        timeSync:
+          type: string
+        beep:
+          type: string
+        ampm:
+          type: string
+        lockOutChange:
+          type: string
+        autoDim:
+          type: string
+        signalIslandModeEnable:
+          type: string
+        importPower:
+          type: string
+          description: Max import power (W)
+        acOutputPowerLimit:
+          type: string
+        allowRemoteControl:
+          type: string
+        remoteLock:
+          type: string
+        batteryChargeType:
+          type: string
+        batteryWorkStatus:
+          type: string
+        specialFunction:
+          type: string
+        mpptNum:
+          type: string
+        mpptMulti:
+          type: string
+        pvLine:
+          type: string
+        smartLoadOpenDelay:
+          type: string
+        smartCTEnable:
+          type: string
+        rsd:
+          type: string
+        atsSwitch:
+          type: string
+        atsEnable:
+          type: string
+        drmEnable:
+          type: string
+        pv1SelfCheck:
+          type: string
+        pv2SelfCheck:
+          type: string
+        pv3SelfCheck:
+          type: string
+        overVolt1:
+          type: string
+        overVolt2:
+          type: string
+        overVolt1Delay:
+          type: string
+        overVolt2Delay:
+          type: string
+        underVolt1:
+          type: string
+        underVolt2:
+          type: string
+        underVolt1Delay:
+          type: string
+        underVolt2Delay:
+          type: string
+        overFreq1:
+          type: string
+        overFreq2:
+          type: string
+        overFreq1Delay:
+          type: string
+        overFreq2Delay:
+          type: string
+        underFreq1:
+          type: string
+        underFreq2:
+          type: string
+        underFreq1Delay:
+          type: string
+        underFreq2Delay:
+          type: string
+        reconnMinVolt:
+          type: string
+        reconnMaxVolt:
+          type: string
+        reconnMinFreq:
+          type: string
+        reconnMaxFreq:
+          type: string
+        recoveryTime:
+          type: string
+        facLowProtect:
+          type: string
+        facHighProtect:
+          type: string
+        vacLowProtect:
+          type: string
+        vacHighProtect:
+          type: string
+        overLongVolt:
+          type: string
+        isletProtect:
+          type: string
+        arcFaultType:
+          type: string
+
+    InverterParams:
+      type: object
+      description: Available chart parameters for an inverter
+      properties:
+        infos:
+          type: array
+          items:
+            type: object
+            properties:
+              groupName:
+                type: string
+                description: "e.g. Grid, Battery, Load, PV, Output, Inverter"
+              editable:
+                type: boolean
+              groupContent:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                    label:
+                      type: string
+                    unit:
+                      type: string
+
+security:
+  - BearerAuth: []
+
+paths:
+  # ============ AUTHENTICATION ============
+  /anonymous/publicKey:
+    get:
+      tags: [Authentication]
+      summary: Get RSA public key for password encryption
+      security: []
+      parameters:
+        - name: nonce
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Millisecond timestamp
+        - name: source
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [sunsynk, elinter]
+        - name: sign
+          in: query
+          required: true
+          schema:
+            type: string
+          description: "MD5 of 'nonce={nonce}&source={source}POWER_VIEW'"
+      responses:
+        '200':
+          description: RSA public key (Base64 DER format)
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: string
+                        description: Base64-encoded DER public key
+
+  /oauth/token/new:
+    post:
+      tags: [Authentication]
+      summary: Authenticate with RSA-encrypted password
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [sign, nonce, username, password, grant_type, client_id, source]
+              properties:
+                sign:
+                  type: string
+                  description: "MD5 of 'nonce={nonce}&source={source}{pubkey_first_10_chars}'"
+                nonce:
+                  type: string
+                  description: Millisecond timestamp
+                username:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  description: RSA PKCS1v15-encrypted Base64 password
+                grant_type:
+                  type: string
+                  enum: [password]
+                client_id:
+                  type: string
+                  enum: [csp-web]
+                source:
+                  type: string
+                  enum: [sunsynk, elinter]
+      responses:
+        '200':
+          description: Authentication successful
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/TokenResponse'
+
+  /oauth/check/token/code:
+    post:
+      tags: [Authentication]
+      summary: Verify MFA token code
+      security: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Token check result
+
+  /anonymous/checkAccount:
+    get:
+      tags: [Authentication]
+      summary: Check if account exists
+      security: []
+      parameters:
+        - name: account
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Account check result
+
+  /anonymous/account/MfaStatus:
+    get:
+      tags: [Authentication]
+      summary: Get MFA status for account
+      security: []
+      parameters:
+        - name: account
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: MFA status
+
+  /anonymous/getCode:
+    get:
+      tags: [Authentication]
+      summary: Request verification code (email)
+      security: []
+      responses:
+        '200':
+          description: Code sent
+
+  /anonymous/getVerificationCode:
+    get:
+      tags: [Authentication]
+      summary: Request verification code (alternative)
+      security: []
+      responses:
+        '200':
+          description: Code sent
+
+  /anonymous/checkCode:
+    get:
+      tags: [Authentication]
+      summary: Validate verification code
+      security: []
+      responses:
+        '200':
+          description: Code validation result
+
+  /anonymous/resetPwd:
+    post:
+      tags: [Authentication]
+      summary: Reset password
+      security: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Password reset result
+
+  /anonymous/signup:
+    post:
+      tags: [Authentication]
+      summary: Register new account
+      security: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Registration result
+
+  /anonymous/area/list:
+    get:
+      tags: [Authentication]
+      summary: List available regions/areas
+      security: []
+      responses:
+        '200':
+          description: Area list
+
+  /anonymous/ip:
+    get:
+      tags: [Authentication]
+      summary: Get client IP and geolocation
+      security: []
+      responses:
+        '200':
+          description: IP information
+
+  # ============ USER ============
+  /api/v1/user:
+    get:
+      tags: [User]
+      summary: Get current user profile
+      parameters:
+        - name: lan
+          in: query
+          schema:
+            type: string
+            default: en
+      responses:
+        '200':
+          description: User profile
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/UserInfo'
+
+  /api/v1/user/personalized:
+    get:
+      tags: [User]
+      summary: Get user personalization settings
+      responses:
+        '200':
+          description: Personalized settings
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/UserPersonalized'
+    post:
+      tags: [User]
+      summary: Update user personalization settings
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserPersonalized'
+      responses:
+        '200':
+          description: Updated
+
+  /api/v1/user/{userId}/plantCount:
+    get:
+      tags: [User]
+      summary: Get plant count for user
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Plant count
+
+  /api/v1/user/{userId}/eventCount:
+    get:
+      tags: [User]
+      summary: Get event count for user
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Event count
+
+  /api/v1/user/migrate:
+    post:
+      tags: [User]
+      summary: Migrate user to new region
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Migration result
+
+  /api/v1/user/migrate/status:
+    get:
+      tags: [User]
+      summary: Check migration status
+      responses:
+        '200':
+          description: Migration status
+
+  # ============ PLANTS ============
+  /api/v1/plants:
+    get:
+      tags: [Plants]
+      summary: List all plants
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+        - name: name
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Paginated plant list
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          pageSize:
+                            type: integer
+                          pageNumber:
+                            type: integer
+                          total:
+                            type: integer
+                          infos:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/PlantInfo'
+
+  /api/v1/plant/{plantId}:
+    get:
+      tags: [Plants]
+      summary: Get plant details
+      parameters:
+        - name: plantId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Plant details
+    post:
+      tags: [Plants]
+      summary: Update plant details
+      parameters:
+        - name: plantId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Updated
+
+  /api/v1/plant/{plantId}/realtime:
+    get:
+      tags: [Plants]
+      summary: Get plant realtime overview
+      parameters:
+        - name: plantId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: id
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Plant realtime data
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/PlantRealtime'
+
+  /api/v1/plant/{plantId}/inverters:
+    get:
+      tags: [Plants]
+      summary: List inverters in a plant
+      parameters:
+        - name: plantId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+        - name: status
+          in: query
+          schema:
+            type: integer
+            default: -1
+        - name: type
+          in: query
+          schema:
+            type: integer
+            default: -2
+      responses:
+        '200':
+          description: Inverter list
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          pageSize:
+                            type: integer
+                          pageNumber:
+                            type: integer
+                          total:
+                            type: integer
+                          infos:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/InverterInfo'
+
+  /api/v1/plant/{plantId}/info:
+    get:
+      tags: [Plants]
+      summary: Get plant info details
+      parameters:
+        - name: plantId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Plant info
+
+  /api/v1/plant/{plantId}/gateway:
+    get:
+      tags: [Plants]
+      summary: Get plant gateway info
+      parameters:
+        - name: plantId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Gateway info
+
+  /api/v1/plant/{plantId}/inverterCount:
+    get:
+      tags: [Plants]
+      summary: Get inverter count for plant
+      parameters:
+        - name: plantId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Inverter count
+
+  /api/v1/plant/{plantId}/eventCount:
+    get:
+      tags: [Plants]
+      summary: Get event count for plant
+      parameters:
+        - name: plantId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Event count
+
+  /api/v1/plant/{plantId}/emsDeviceCount:
+    get:
+      tags: [Plants]
+      summary: Get EMS device count
+      parameters:
+        - name: plantId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: EMS device count
+
+  /api/v1/plant/{plantId}/share:
+    post:
+      tags: [Plants]
+      summary: Share plant with another user
+      parameters:
+        - name: plantId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Share result
+
+  /api/v1/plant/{plantId}/getShareUsers:
+    get:
+      tags: [Plants]
+      summary: List users plant is shared with
+      parameters:
+        - name: plantId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Share users
+
+  /api/v1/plant/{plantId}/cancelShare:
+    post:
+      tags: [Plants]
+      summary: Cancel sharing
+      parameters:
+        - name: plantId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Share cancelled
+
+  /api/v1/plant/{plantId}/transfer:
+    post:
+      tags: [Plants]
+      summary: Transfer plant ownership
+      parameters:
+        - name: plantId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: account
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Transfer result
+
+  /api/v1/plant/{plantId}/delete:
+    post:
+      tags: [Plants]
+      summary: Delete a plant
+      parameters:
+        - name: plantId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Plant deleted
+
+  /api/v1/plant/thumbnail:
+    post:
+      tags: [Plants]
+      summary: Upload plant thumbnail
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Thumbnail uploaded
+
+  /api/v1/plant/own:
+    get:
+      tags: [Plants]
+      summary: Get own plants
+      responses:
+        '200':
+          description: Own plants
+
+  /api/v1/plant/filter:
+    get:
+      tags: [Plants]
+      summary: Get plant filter options
+      responses:
+        '200':
+          description: Filter options
+
+  /api/v1/plants/map:
+    get:
+      tags: [Plants]
+      summary: Get plants for map view
+      responses:
+        '200':
+          description: Map data
+
+  /api/v1/plants/mapCount:
+    get:
+      tags: [Plants]
+      summary: Get plant counts for map
+      responses:
+        '200':
+          description: Map counts
+
+  # ============ INVERTERS ============
+  /api/v1/inverters:
+    get:
+      tags: [Inverters]
+      summary: List all inverters with filtering
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+        - name: status
+          in: query
+          schema:
+            type: integer
+            default: -1
+        - name: sn
+          in: query
+          schema:
+            type: string
+        - name: plantId
+          in: query
+          schema:
+            type: string
+        - name: type
+          in: query
+          schema:
+            type: integer
+            default: -2
+      responses:
+        '200':
+          description: Inverter list
+
+  /api/v1/inverters/count:
+    get:
+      tags: [Inverters]
+      summary: Count inverters
+      parameters:
+        - name: type
+          in: query
+          schema:
+            type: integer
+            default: -2
+        - name: status
+          in: query
+          schema:
+            type: integer
+            default: -1
+      responses:
+        '200':
+          description: Inverter count
+
+  /api/v1/inverter/{sn}:
+    get:
+      tags: [Inverters]
+      summary: Get inverter details
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Inverter details
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/InverterInfo'
+
+  /api/v1/inverter/{id}/alias:
+    post:
+      tags: [Inverters]
+      summary: Set inverter alias/name
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                alias:
+                  type: string
+      responses:
+        '200':
+          description: Alias updated
+
+  /api/v1/inverter/{id}/delete:
+    post:
+      tags: [Inverters]
+      summary: Delete/remove inverter
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Inverter deleted
+
+  /api/v1/inverter/{sn}/boot:
+    post:
+      tags: [Inverters]
+      summary: Boot/restart inverter
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Boot command sent
+
+  /api/v1/inverter/{sn}/shutdown:
+    post:
+      tags: [Inverters]
+      summary: Shutdown inverter
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Shutdown command sent
+
+  /api/v1/inverter/params:
+    get:
+      tags: [Inverters]
+      summary: Get available chart parameters for inverter
+      parameters:
+        - name: sn
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: devType
+          in: query
+          required: true
+          schema:
+            type: integer
+          description: "Device type (2 = hybrid)"
+        - name: lan
+          in: query
+          schema:
+            type: string
+            default: en
+      responses:
+        '200':
+          description: Chart parameter definitions
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/InverterParams'
+
+  /api/v1/inverter/setting/{sn}/support:
+    get:
+      tags: [Inverters]
+      summary: Check if inverter supports remote settings
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: "Returns data: true/false"
+
+  # ============ REALTIME DATA ============
+  /api/v1/inverter/{sn}/flow:
+    get:
+      tags: [Realtime Data]
+      summary: Get complete energy flow snapshot
+      description: Returns all power flows, SOC, and direction flags in a single call. Best for dashboard display.
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Energy flow data
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/FlowData'
+
+  /api/v1/inverter/{sn}/realtime/input:
+    get:
+      tags: [Realtime Data]
+      summary: Get PV input realtime data
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: PV input data with per-string breakdown
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/PVRealtimeInput'
+
+  /api/v1/inverter/{sn}/realtime/output:
+    get:
+      tags: [Realtime Data]
+      summary: Get inverter output realtime data
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: AC output data
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/RealtimeOutput'
+
+  /api/v1/inverter/grid/{sn}/realtime:
+    get:
+      tags: [Realtime Data]
+      summary: Get grid realtime data
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: lan
+          in: query
+          schema:
+            type: string
+            default: en
+      responses:
+        '200':
+          description: Grid data including import/export totals
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/GridRealtime'
+
+  /api/v1/inverter/battery/{sn}/realtime:
+    get:
+      tags: [Realtime Data]
+      summary: Get battery realtime data
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: lan
+          in: query
+          schema:
+            type: string
+            default: en
+      responses:
+        '200':
+          description: Battery SOC, power, voltage, current, temperature
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/BatteryRealtime'
+
+  /api/v1/inverter/load/{sn}/realtime:
+    get:
+      tags: [Realtime Data]
+      summary: Get load realtime data
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: lan
+          in: query
+          schema:
+            type: string
+            default: en
+      responses:
+        '200':
+          description: Load consumption data
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/LoadRealtime'
+
+  /api/v1/inverter/eps/{sn}/realtime:
+    get:
+      tags: [Realtime Data]
+      summary: Get EPS (emergency power) realtime data
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: lan
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: EPS power per phase
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/EpsRealtime'
+
+  /api/v1/inverter/gen/{sn}/realtime:
+    get:
+      tags: [Realtime Data]
+      summary: Get generator realtime data
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Generator power and energy data
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/GenRealtime'
+
+  /api/v1/inverter/meter/{sn}/realtime:
+    get:
+      tags: [Realtime Data]
+      summary: Get meter realtime data
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Meter data
+
+  /api/v1/inverter/{sn}/pvIVRealtime:
+    get:
+      tags: [Realtime Data]
+      summary: Get detailed PV IV curve data (installer permission required)
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: PV IV curve data
+        '403':
+          description: No Permissions (installer only)
+
+  /api/v1/inverter/replay/{sn}/realtime:
+    get:
+      tags: [Realtime Data]
+      summary: Get replay/historical realtime snapshot
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Replay data
+
+  /api/v1/plant/energy/{plantId}/flow:
+    get:
+      tags: [Realtime Data]
+      summary: Get plant-level energy flow
+      parameters:
+        - name: plantId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: date
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+        - name: lan
+          in: query
+          schema:
+            type: string
+            default: en
+      responses:
+        '200':
+          description: Plant energy flow
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/FlowData'
+
+  # ============ HISTORICAL DATA ============
+  /api/v1/plant/energy/{plantId}/day:
+    get:
+      tags: [Historical Data]
+      summary: Get daily energy chart (5-min intervals)
+      parameters:
+        - name: plantId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: date
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+          description: "YYYY-MM-DD"
+        - name: lan
+          in: query
+          schema:
+            type: string
+            default: en
+      responses:
+        '200':
+          description: Time series power data (W) in 5-minute intervals
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/EnergyChartData'
+
+  /api/v1/plant/energy/{plantId}/month:
+    get:
+      tags: [Historical Data]
+      summary: Get monthly energy chart (daily values)
+      parameters:
+        - name: plantId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: date
+          in: query
+          required: true
+          schema:
+            type: string
+          description: "YYYY-MM"
+        - name: lan
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Daily energy values (kWh)
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/EnergyChartData'
+
+  /api/v1/plant/energy/{plantId}/year:
+    get:
+      tags: [Historical Data]
+      summary: Get yearly energy chart (monthly values)
+      parameters:
+        - name: plantId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: date
+          in: query
+          required: true
+          schema:
+            type: string
+          description: "YYYY"
+        - name: lan
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Monthly energy values (kWh)
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/EnergyChartData'
+
+  /api/v1/plant/energy/{plantId}/total:
+    get:
+      tags: [Historical Data]
+      summary: Get lifetime energy totals
+      parameters:
+        - name: plantId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: lan
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Yearly energy totals (kWh)
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/EnergyChartData'
+
+  /api/v1/plant/energy/{plantId}/generation/use:
+    get:
+      tags: [Historical Data]
+      summary: Get generation vs consumption summary
+      parameters:
+        - name: plantId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: date
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+        - name: lan
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Generation, load, battery charge, grid sell totals
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/GenerationUse'
+
+  /api/v1/plant/ems/power/{plantId}/day:
+    get:
+      tags: [Historical Data]
+      summary: Get EMS power day chart (kW)
+      parameters:
+        - name: plantId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: date
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+        - name: lan
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: EMS power data in kW
+
+  /api/v1/plant/ems/energy/{plantId}:
+    get:
+      tags: [Historical Data]
+      summary: Get EMS energy data
+      parameters:
+        - name: plantId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: date
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: lan
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: EMS energy data
+
+  /api/v1/inverter/{sn}/day:
+    get:
+      tags: [Historical Data]
+      summary: Get inverter day chart with custom columns
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: date
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+        - name: column
+          in: query
+          schema:
+            type: string
+          description: "Comma-separated param names: pac,pv,gridPower,loadPower,batteryPower"
+        - name: lan
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Inverter day chart data
+
+  /api/v1/inverter/{sn}/month:
+    get:
+      tags: [Historical Data]
+      summary: Get inverter month chart
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: date
+          in: query
+          required: true
+          schema:
+            type: string
+          description: "YYYY-MM"
+        - name: lan
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Inverter month chart data
+
+  /api/v1/inverter/{sn}/year:
+    get:
+      tags: [Historical Data]
+      summary: Get inverter year chart
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: date
+          in: query
+          required: true
+          schema:
+            type: string
+          description: "YYYY"
+      responses:
+        '200':
+          description: Inverter year chart data
+
+  /api/v1/inverter/{sn}/total:
+    get:
+      tags: [Historical Data]
+      summary: Get inverter total/lifetime chart
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Inverter total chart data
+
+  /api/v1/inverter/{sn}/input/day:
+    get:
+      tags: [Historical Data]
+      summary: Get PV input day chart
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: date
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: PV input day data
+
+  /api/v1/inverter/{sn}/output/day:
+    get:
+      tags: [Historical Data]
+      summary: Get output day chart
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: date
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Output day data
+
+  /api/v1/inverter/grid/{sn}/day:
+    get:
+      tags: [Historical Data]
+      summary: Get grid day chart
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: date
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Grid day chart
+
+  /api/v1/inverter/grid/{sn}/month:
+    get:
+      tags: [Historical Data]
+      summary: Get grid month chart
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: date
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Grid month chart
+
+  /api/v1/inverter/grid/{sn}/year:
+    get:
+      tags: [Historical Data]
+      summary: Get grid year chart
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: date
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Grid year chart
+
+  /api/v1/inverter/grid/{sn}/total:
+    get:
+      tags: [Historical Data]
+      summary: Get grid total chart
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Grid total chart
+
+  /api/v1/inverter/battery/{sn}/day:
+    get:
+      tags: [Historical Data]
+      summary: Get battery day chart
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: date
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Battery day chart
+
+  /api/v1/inverter/battery/{sn}/month:
+    get:
+      tags: [Historical Data]
+      summary: Get battery month chart
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: date
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Battery month chart
+
+  /api/v1/inverter/battery/{sn}/year:
+    get:
+      tags: [Historical Data]
+      summary: Get battery year chart
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: date
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Battery year chart
+
+  /api/v1/inverter/battery/{sn}/total:
+    get:
+      tags: [Historical Data]
+      summary: Get battery total chart
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Battery total chart
+
+  /api/v1/inverter/load/{sn}/day:
+    get:
+      tags: [Historical Data]
+      summary: Get load day chart
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: date
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Load day chart
+
+  /api/v1/inverter/load/{sn}/month:
+    get:
+      tags: [Historical Data]
+      summary: Get load month chart
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: date
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Load month chart
+
+  /api/v1/inverter/load/{sn}/year:
+    get:
+      tags: [Historical Data]
+      summary: Get load year chart
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: date
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Load year chart
+
+  /api/v1/inverter/load/{sn}/total:
+    get:
+      tags: [Historical Data]
+      summary: Get load total chart
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Load total chart
+
+  /api/v1/inverter/eps/{sn}/day:
+    get:
+      tags: [Historical Data]
+      summary: Get EPS day chart
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: date
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: EPS day chart
+
+  /api/v1/inverter/eps/{sn}/month:
+    get:
+      tags: [Historical Data]
+      summary: Get EPS month chart
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: EPS month chart
+
+  /api/v1/inverter/eps/{sn}/year:
+    get:
+      tags: [Historical Data]
+      summary: Get EPS year chart
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: EPS year chart
+
+  /api/v1/inverter/eps/{sn}/total:
+    get:
+      tags: [Historical Data]
+      summary: Get EPS total chart
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: EPS total chart
+
+  /api/v1/inverter/meter/{sn}/day:
+    get:
+      tags: [Historical Data]
+      summary: Get meter day chart
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: date
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Meter day chart
+
+  /api/v1/inverter/meter/{sn}/month:
+    get:
+      tags: [Historical Data]
+      summary: Get meter month chart
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Meter month chart
+
+  /api/v1/inverter/meter/{sn}/year:
+    get:
+      tags: [Historical Data]
+      summary: Get meter year chart
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Meter year chart
+
+  /api/v1/inverter/meter/{sn}/total:
+    get:
+      tags: [Historical Data]
+      summary: Get meter total chart
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Meter total chart
+
+  /api/v1/inverter/meter/{sn}/getExistsMeter:
+    get:
+      tags: [Meter]
+      summary: Check if meter exists
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Meter existence check
+
+  /api/v1/inverter/meter/{sn}/getMeterDataInfo:
+    get:
+      tags: [Meter]
+      summary: Get meter data info
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Meter data info
+
+  /api/v1/chart/param/{sn}/day:
+    get:
+      tags: [Historical Data]
+      summary: Get custom chart params day data
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: date
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Custom chart day data
+
+  /api/v1/chart/param/equip:
+    get:
+      tags: [Historical Data]
+      summary: Get equipment chart parameters
+      parameters:
+        - name: sn
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Equipment chart params
+
+  /api/v1/chart/param/custom:
+    get:
+      tags: [Historical Data]
+      summary: Get custom chart configuration
+      responses:
+        '200':
+          description: Custom chart config
+
+  /api/v1/chart/param/multiple/day:
+    get:
+      tags: [Historical Data]
+      summary: Get multiple parameter day chart
+      responses:
+        '200':
+          description: Multiple param chart data
+
+  /api/v1/inverter/genMi/{sn}/day:
+    get:
+      tags: [Historical Data]
+      summary: Get generator/micro inverter day chart
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: date
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Gen/MI day chart
+
+  /api/v1/inverter/genMi/{sn}/byDate:
+    get:
+      tags: [Historical Data]
+      summary: Get generator/micro inverter data by date range
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Gen/MI date range data
+
+  /api/v1/plant/{plantId}/power/day:
+    get:
+      tags: [Historical Data]
+      summary: Get plant power day chart
+      parameters:
+        - name: plantId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: date
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Plant power day data
+
+  /api/v1/plant/{plantId}/power/month:
+    get:
+      tags: [Historical Data]
+      summary: Get plant power month chart
+      parameters:
+        - name: plantId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Plant power month data
+
+  /api/v1/plant/{plantId}/power/year:
+    get:
+      tags: [Historical Data]
+      summary: Get plant power year chart
+      parameters:
+        - name: plantId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Plant power year data
+
+  /api/v1/plant/{plantId}/power/total:
+    get:
+      tags: [Historical Data]
+      summary: Get plant power total chart
+      parameters:
+        - name: plantId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Plant power total data
+
+  # ============ SETTINGS READ ============
+  /api/v1/common/setting/{sn}/read:
+    get:
+      tags: [Settings Read]
+      summary: Read all inverter settings (Hybrid/Deye type)
+      description: |
+        Returns the complete settings object for a hybrid inverter.
+        All values are strings. This is the main settings endpoint for type 2 (hybrid) inverters.
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Complete settings dump (300+ fields)
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/CommonSettings'
+
+  /api/v1/gy/setting/{sn}/read:
+    get:
+      tags: [Settings Read]
+      summary: Read grid-tied inverter settings
+      description: For grid-tied (GY) inverters only. Returns "No Permissions" for hybrid inverters.
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: GY inverter settings
+
+  /api/v1/mt/setting/{sn}/read:
+    get:
+      tags: [Settings Read]
+      summary: Read micro/string inverter settings
+      description: For micro/string (MT) inverters only.
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: MT inverter settings
+
+  /api/v1/sunsynk/store/singlePhase/{sn}/read:
+    get:
+      tags: [Settings Read]
+      summary: Read Sunsynk Store single-phase inverter settings
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Single-phase store settings
+
+  /api/v1/sunsynk/store/threePhase/{sn}/read:
+    get:
+      tags: [Settings Read]
+      summary: Read Sunsynk Store three-phase inverter settings
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Three-phase store settings
+
+  /api/v1/setting/sidaoer/{sn}/read:
+    get:
+      tags: [Settings Read]
+      summary: Read SiDaoEr inverter settings
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: SiDaoEr settings
+
+  /api/v1/setting/uneet/{sn}/read:
+    get:
+      tags: [Settings Read]
+      summary: Read UNEET inverter settings
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: UNEET settings
+
+  /api/v1/acSwitch/setting/{sn}/read:
+    get:
+      tags: [Settings Read]
+      summary: Read AC switch settings
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: AC switch settings
+
+  /api/v1/asw/{sn}/read:
+    get:
+      tags: [Settings Read]
+      summary: Read ASW device settings
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: ASW settings
+
+  # ============ SETTINGS WRITE - COMMON (HYBRID) ============
+  /api/v1/common/setting/{sn}/set:
+    post:
+      tags: [Settings Write]
+      summary: Write inverter settings (Hybrid/Deye)
+      description: |
+        Send only the fields you want to change. All values as strings.
+
+        **CRITICAL SAFETY NOTES:**
+        - Do NOT mix battery settings with system mode settings in a single request
+        - Changes propagate through cloud to inverter - may take 60+ seconds
+        - Use exponential backoff (3 attempts, 4-10s delays) for reliability
+        - Verify changes by re-reading settings after write
+
+        **Common use cases:**
+        - Change work mode: `{"sysWorkMode": "2", "peakAndVallery": "1"}`
+        - Set timer slot: `{"sellTime1": "06:00", "sellTime1Pac": "3000", "cap1": "100", "time1on": "true"}`
+        - Enable solar sell: `{"solarSell": "1", "solarMaxSellPower": "10000"}`
+        - Set battery limits: `{"batteryShutdownCap": "15", "batteryRestartCap": "20"}`
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CommonSettings'
+            examples:
+              changeWorkMode:
+                summary: Change to Limited to Home mode
+                value:
+                  sysWorkMode: "2"
+                  peakAndVallery: "1"
+              setTimerSlot:
+                summary: Configure timer slot 1
+                value:
+                  sellTime1: "06:00"
+                  sellTime1Pac: "3000"
+                  cap1: "100"
+                  time1on: "true"
+                  sellTime1En: "1"
+              enableGridCharge:
+                summary: Enable grid charging
+                value:
+                  sdChargeOn: "1"
+                  sdStartCap: "30"
+                  sdBatteryCurrent: "110"
+              setBatteryLimits:
+                summary: Set battery SOC limits
+                value:
+                  batteryShutdownCap: "15"
+                  batteryRestartCap: "20"
+                  batteryLowCap: "25"
+      responses:
+        '200':
+          description: Settings applied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /api/v1/pile/setting/{sn}/set:
+    post:
+      tags: [Settings Write]
+      summary: Write charge pile settings
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Settings applied
+
+  /api/v1/acSwitch/setting/{sn}/set:
+    post:
+      tags: [Settings Write]
+      summary: Write AC switch settings
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Settings applied
+
+  # ============ SETTINGS WRITE - GY (GRID-TIED) ============
+  /api/v1/gy/setting/{sn}/basicSetting:
+    post:
+      tags: [Settings Write - GY (Grid-Tied)]
+      summary: Set GY basic settings
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Settings applied
+
+  /api/v1/gy/setting/{sn}/pcsWorkModel:
+    post:
+      tags: [Settings Write - GY (Grid-Tied)]
+      summary: Set GY PCS work model
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Settings applied
+
+  /api/v1/gy/setting/{sn}/gridProtect:
+    post:
+      tags: [Settings Write - GY (Grid-Tied)]
+      summary: Set GY grid protection parameters
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Settings applied
+
+  /api/v1/gy/setting/{sn}/gridProtectTime:
+    post:
+      tags: [Settings Write - GY (Grid-Tied)]
+      summary: Set GY grid protection timing
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Settings applied
+
+  /api/v1/gy/setting/{sn}/freqParam:
+    post:
+      tags: [Settings Write - GY (Grid-Tied)]
+      summary: Set GY frequency parameters
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Settings applied
+
+  /api/v1/gy/setting/{sn}/powerFactor:
+    post:
+      tags: [Settings Write - GY (Grid-Tied)]
+      summary: Set GY power factor
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Settings applied
+
+  /api/v1/gy/setting/{sn}/sysMeter:
+    post:
+      tags: [Settings Write - GY (Grid-Tied)]
+      summary: Set GY system meter configuration
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Settings applied
+
+  /api/v1/gy/setting/{sn}/setBattery:
+    post:
+      tags: [Settings Write - GY (Grid-Tied)]
+      summary: Set GY battery parameters
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Settings applied
+
+  # ============ SETTINGS WRITE - MT (MICRO/STRING) ============
+  /api/v1/mt/setting/{sn}/active:
+    post:
+      tags: [Settings Write - MT (Micro/String)]
+      summary: Set MT active power control
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Settings applied
+
+  /api/v1/mt/setting/{sn}/reactive:
+    post:
+      tags: [Settings Write - MT (Micro/String)]
+      summary: Set MT reactive power control
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Settings applied
+
+  /api/v1/mt/setting/{sn}/gridVolt:
+    post:
+      tags: [Settings Write - MT (Micro/String)]
+      summary: Set MT grid voltage parameters
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Settings applied
+
+  /api/v1/mt/setting/{sn}/gridFreq:
+    post:
+      tags: [Settings Write - MT (Micro/String)]
+      summary: Set MT grid frequency parameters
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Settings applied
+
+  /api/v1/mt/setting/{sn}/acVoltFreq:
+    post:
+      tags: [Settings Write - MT (Micro/String)]
+      summary: Set MT AC voltage/frequency
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Settings applied
+
+  /api/v1/mt/setting/{sn}/overFreq:
+    post:
+      tags: [Settings Write - MT (Micro/String)]
+      summary: Set MT over-frequency protection
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Settings applied
+
+  /api/v1/mt/setting/{sn}/dci:
+    post:
+      tags: [Settings Write - MT (Micro/String)]
+      summary: Set MT DC injection parameters
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Settings applied
+
+  /api/v1/mt/setting/{sn}/startUp:
+    post:
+      tags: [Settings Write - MT (Micro/String)]
+      summary: Set MT startup parameters
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Settings applied
+
+  /api/v1/mt/setting/{sn}/meter:
+    post:
+      tags: [Settings Write - MT (Micro/String)]
+      summary: Set MT meter configuration
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Settings applied
+
+  /api/v1/mt/setting/{sn}/singleInstruction:
+    post:
+      tags: [Settings Write - MT (Micro/String)]
+      summary: Send single Modbus instruction to MT inverter
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Instruction sent
+
+  /api/v1/mt/setting/{sn}/writeEtoday:
+    post:
+      tags: [Settings Write - MT (Micro/String)]
+      summary: Write today's energy counter
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Counter written
+
+  /api/v1/mt/setting/{sn}/writeEtotal:
+    post:
+      tags: [Settings Write - MT (Micro/String)]
+      summary: Write total energy counter
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Counter written
+
+  # ============ SETTINGS WRITE - SUNSYNK STORE SINGLE PHASE ============
+  /api/v1/sunsynk/store/singlePhase/{sn}/setting/basic:
+    post:
+      tags: [Settings Write - Sunsynk Store Single Phase]
+      summary: Set single-phase basic settings
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Settings applied
+
+  /api/v1/sunsynk/store/singlePhase/{sn}/setting/workMode:
+    post:
+      tags: [Settings Write - Sunsynk Store Single Phase]
+      summary: Set single-phase work mode
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Settings applied
+
+  /api/v1/sunsynk/store/singlePhase/{sn}/setting/batt:
+    post:
+      tags: [Settings Write - Sunsynk Store Single Phase]
+      summary: Set single-phase battery settings
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Settings applied
+
+  /api/v1/sunsynk/store/singlePhase/{sn}/setting/gridInput:
+    post:
+      tags: [Settings Write - Sunsynk Store Single Phase]
+      summary: Set single-phase grid input settings
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Settings applied
+
+  /api/v1/sunsynk/store/singlePhase/{sn}/setting/smartLoad:
+    post:
+      tags: [Settings Write - Sunsynk Store Single Phase]
+      summary: Set single-phase smart load settings
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Settings applied
+
+  /api/v1/sunsynk/store/singlePhase/{sn}/setting/advanced:
+    post:
+      tags: [Settings Write - Sunsynk Store Single Phase]
+      summary: Set single-phase advanced settings
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Settings applied
+
+  /api/v1/sunsynk/store/singlePhase/{sn}/setting/arc:
+    post:
+      tags: [Settings Write - Sunsynk Store Single Phase]
+      summary: Set single-phase ARC fault detection
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Settings applied
+
+  /api/v1/sunsynk/store/singlePhase/{sn}/setting/reset:
+    post:
+      tags: [Settings Write - Sunsynk Store Single Phase]
+      summary: Reset single-phase to factory defaults
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Factory reset initiated
+
+  /api/v1/sunsynk/store/singlePhase/{sn}/setting/systime:
+    post:
+      tags: [Settings Write - Sunsynk Store Single Phase]
+      summary: Set single-phase system time
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Time set
+
+  /api/v1/sunsynk/store/singlePhase/{sn}/setting/arcClear:
+    post:
+      tags: [Settings Write - Sunsynk Store Single Phase]
+      summary: Clear ARC fault counter
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: ARC counter cleared
+
+  # ============ SETTINGS WRITE - SUNSYNK STORE THREE PHASE ============
+  /api/v1/sunsynk/store/threePhase/{sn}/setting/basic:
+    post:
+      tags: [Settings Write - Sunsynk Store Three Phase]
+      summary: Set three-phase basic settings
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Settings applied
+
+  /api/v1/sunsynk/store/threePhase/{sn}/setting/workMode:
+    post:
+      tags: [Settings Write - Sunsynk Store Three Phase]
+      summary: Set three-phase work mode
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Settings applied
+
+  /api/v1/sunsynk/store/threePhase/{sn}/setting/batt:
+    post:
+      tags: [Settings Write - Sunsynk Store Three Phase]
+      summary: Set three-phase battery settings
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Settings applied
+
+  /api/v1/sunsynk/store/threePhase/{sn}/setting/gridInput:
+    post:
+      tags: [Settings Write - Sunsynk Store Three Phase]
+      summary: Set three-phase grid input settings
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Settings applied
+
+  /api/v1/sunsynk/store/threePhase/{sn}/setting/smartLoad:
+    post:
+      tags: [Settings Write - Sunsynk Store Three Phase]
+      summary: Set three-phase smart load settings
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Settings applied
+
+  /api/v1/sunsynk/store/threePhase/{sn}/setting/advanced:
+    post:
+      tags: [Settings Write - Sunsynk Store Three Phase]
+      summary: Set three-phase advanced settings
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Settings applied
+
+  /api/v1/sunsynk/store/threePhase/{sn}/setting/arc:
+    post:
+      tags: [Settings Write - Sunsynk Store Three Phase]
+      summary: Set three-phase ARC fault detection
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Settings applied
+
+  /api/v1/sunsynk/store/threePhase/{sn}/setting/arcClear:
+    post:
+      tags: [Settings Write - Sunsynk Store Three Phase]
+      summary: Clear three-phase ARC fault counter
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: ARC counter cleared
+
+  /api/v1/sunsynk/store/threePhase/{sn}/setting/reset:
+    post:
+      tags: [Settings Write - Sunsynk Store Three Phase]
+      summary: Reset three-phase to factory defaults
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Factory reset initiated
+
+  /api/v1/sunsynk/store/threePhase/{sn}/setting/systime:
+    post:
+      tags: [Settings Write - Sunsynk Store Three Phase]
+      summary: Set three-phase system time
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Time set
+
+  # ============ SETTINGS WRITE - SIDAOER ============
+  /api/v1/setting/sidaoer/{sn}/basicSetting:
+    post:
+      tags: [Settings Write - SiDaoEr]
+      summary: SiDaoEr basic settings
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Settings applied
+
+  /api/v1/setting/sidaoer/{sn}/workModeSetting:
+    post:
+      tags: [Settings Write - SiDaoEr]
+      summary: SiDaoEr work mode
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Settings applied
+
+  /api/v1/setting/sidaoer/{sn}/batterySetting:
+    post:
+      tags: [Settings Write - SiDaoEr]
+      summary: SiDaoEr battery settings
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Settings applied
+
+  /api/v1/setting/sidaoer/{sn}/gridSetting:
+    post:
+      tags: [Settings Write - SiDaoEr]
+      summary: SiDaoEr grid settings
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Settings applied
+
+  /api/v1/setting/sidaoer/{sn}/protectSetting:
+    post:
+      tags: [Settings Write - SiDaoEr]
+      summary: SiDaoEr protection settings
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Settings applied
+
+  /api/v1/setting/sidaoer/{sn}/machineSetting:
+    post:
+      tags: [Settings Write - SiDaoEr]
+      summary: SiDaoEr machine settings
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Settings applied
+
+  /api/v1/setting/sidaoer/{sn}/externalSetting:
+    post:
+      tags: [Settings Write - SiDaoEr]
+      summary: SiDaoEr external settings
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Settings applied
+
+  /api/v1/setting/sidaoer/{sn}/changeFreqSetting:
+    post:
+      tags: [Settings Write - SiDaoEr]
+      summary: SiDaoEr frequency change settings
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Settings applied
+
+  /api/v1/setting/sidaoer/{sn}/ipSetting:
+    post:
+      tags: [Settings Write - SiDaoEr]
+      summary: SiDaoEr IP/communication settings
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Settings applied
+
+  /api/v1/setting/sidaoer/{sn}/checkSetting:
+    post:
+      tags: [Settings Write - SiDaoEr]
+      summary: SiDaoEr check/validation settings
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Settings applied
+
+  /api/v1/setting/sidaoer/{sn}/factorySetting:
+    post:
+      tags: [Settings Write - SiDaoEr]
+      summary: SiDaoEr factory reset
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Factory reset initiated
+
+  /api/v1/setting/sidaoer/{sn}/safetyInternalTest:
+    post:
+      tags: [Settings Write - SiDaoEr]
+      summary: SiDaoEr safety internal test
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Test initiated
+
+  /api/v1/setting/uneet/{sn}/safetySetting:
+    post:
+      tags: [Settings Write - SiDaoEr]
+      summary: UNEET safety settings
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Settings applied
+
+  # ============ ASW DEVICE SETTINGS ============
+  /api/v1/asw/{sn}/setting/basic:
+    post:
+      tags: [Settings Write]
+      summary: Set ASW basic settings
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Settings applied
+
+  /api/v1/asw/{sn}/setting/gridProtect:
+    post:
+      tags: [Settings Write]
+      summary: Set ASW grid protection
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Settings applied
+
+  /api/v1/asw/{sn}/setting/activeCtrl:
+    post:
+      tags: [Settings Write]
+      summary: Set ASW active power control
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Settings applied
+
+  /api/v1/asw/{sn}/setting/reactiveCtrl:
+    post:
+      tags: [Settings Write]
+      summary: Set ASW reactive power control
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Settings applied
+
+  # ============ EVENTS ============
+  /api/v1/events:
+    get:
+      tags: [Events]
+      summary: Get events/alarms list
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+        - name: plantId
+          in: query
+          required: true
+          schema:
+            type: integer
+        - name: sn
+          in: query
+          schema:
+            type: string
+        - name: sdate
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+          description: Start date (YYYY-MM-DD)
+        - name: edate
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+          description: End date (YYYY-MM-DD)
+        - name: type
+          in: query
+          required: true
+          schema:
+            type: integer
+          description: "Event type (2 = faults, etc.)"
+        - name: status
+          in: query
+          schema:
+            type: integer
+            default: -1
+        - name: lan
+          in: query
+          schema:
+            type: string
+            default: en
+      responses:
+        '200':
+          description: Events list
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          nextToken:
+                            type: string
+                            nullable: true
+                          record:
+                            type: array
+                            items:
+                              type: object
+
+  /api/v1/event/{sn}/realtime:
+    get:
+      tags: [Events]
+      summary: Get realtime event for inverter
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Realtime event
+
+  /api/v1/event/oneHour:
+    get:
+      tags: [Events]
+      summary: Get events from last hour
+      responses:
+        '200':
+          description: Recent events
+
+  # ============ GATEWAY ============
+  /api/v1/gateway/{gsn}:
+    get:
+      tags: [Gateway]
+      summary: Get gateway details
+      parameters:
+        - name: gsn
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Gateway details
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/GatewayInfo'
+
+  /api/v1/gateways:
+    get:
+      tags: [Gateway]
+      summary: List all gateways
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Gateway list
+
+  /api/v1/gateways/count:
+    get:
+      tags: [Gateway]
+      summary: Count gateways
+      responses:
+        '200':
+          description: Gateway count
+
+  /api/v1/gateway/{gsn}/restart:
+    post:
+      tags: [Gateway]
+      summary: Restart gateway
+      parameters:
+        - name: gsn
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Restart command sent
+
+  /api/v1/gateway/{gsn}/debug:
+    post:
+      tags: [Gateway]
+      summary: Enable gateway debug mode
+      parameters:
+        - name: gsn
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Debug mode toggled
+
+  /api/v1/gateway/{sn}/uploadCycle:
+    post:
+      tags: [Gateway]
+      summary: Set gateway upload cycle/frequency
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Upload cycle set
+
+  /api/v1/gateway/{sn}/connPassword:
+    get:
+      tags: [Gateway]
+      summary: Get gateway connection password
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Connection password
+
+  /api/v1/gateway/fun/param:
+    get:
+      tags: [Gateway]
+      summary: Get gateway function parameters
+      responses:
+        '200':
+          description: Function params
+
+  /api/v1/logger/getInverterLogger/{sn}:
+    get:
+      tags: [Gateway]
+      summary: Get logger for inverter
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Logger info
+
+  /api/v1/logger/plant:
+    get:
+      tags: [Gateway]
+      summary: Get logger for plant
+      responses:
+        '200':
+          description: Logger info
+
+  # ============ BATTERY ============
+  /api/v1/batteries:
+    get:
+      tags: [Battery]
+      summary: List battery packs
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+        - name: plantId
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Battery list
+
+  /api/v1/batteries/count:
+    get:
+      tags: [Battery]
+      summary: Count battery packs
+      responses:
+        '200':
+          description: Battery count
+
+  /api/v1/battery/{sn}/info:
+    get:
+      tags: [Battery]
+      summary: Get battery pack info
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Battery info
+
+  /api/v1/battery/{sn}/realtime:
+    get:
+      tags: [Battery]
+      summary: Get battery pack realtime data
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Battery realtime
+
+  /api/v1/battery/{sn}/day:
+    get:
+      tags: [Battery]
+      summary: Get battery day chart
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: date
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Battery day data
+
+  /api/v1/battery/{sn}/batteryWorkData:
+    get:
+      tags: [Battery]
+      summary: Get battery work data
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Battery work data
+
+  /api/v1/battery/events:
+    get:
+      tags: [Battery]
+      summary: List battery events
+      responses:
+        '200':
+          description: Battery events
+
+  /api/v1/batteries/{id}/slave:
+    get:
+      tags: [Battery]
+      summary: Get slave battery pack info
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Slave battery info
+
+  # ============ AC SWITCH ============
+  /api/v1/acSwitch/{sn}/realtime:
+    get:
+      tags: [AC Switch]
+      summary: Get AC switch realtime data
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: AC switch realtime
+
+  /api/v1/acSwitch/setSwitch:
+    post:
+      tags: [AC Switch]
+      summary: Toggle AC switch on/off
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Switch toggled
+
+  /api/v1/acSwitch/setAlias:
+    post:
+      tags: [AC Switch]
+      summary: Set AC switch alias name
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Alias set
+
+  /api/v1/acSwitch/{sn}/meshCheck/read:
+    get:
+      tags: [AC Switch]
+      summary: Read AC switch mesh check
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Mesh check data
+
+  /api/v1/acSwitch/{sn}/meshCheck/set:
+    post:
+      tags: [AC Switch]
+      summary: Set AC switch mesh check
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Mesh check set
+
+  /api/v1/acSwitch/params:
+    get:
+      tags: [AC Switch]
+      summary: Get AC switch parameters
+      responses:
+        '200':
+          description: AC switch params
+
+  /api/v1/acSwitch/params/day:
+    get:
+      tags: [AC Switch]
+      summary: Get AC switch day data
+      responses:
+        '200':
+          description: AC switch day data
+
+  /api/v1/acSwitch/{sn}/month:
+    get:
+      tags: [AC Switch]
+      summary: Get AC switch month chart
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: AC switch month data
+
+  /api/v1/acSwitch/{sn}/year:
+    get:
+      tags: [AC Switch]
+      summary: Get AC switch year chart
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: AC switch year data
+
+  /api/v1/acSwitch/{sn}/total:
+    get:
+      tags: [AC Switch]
+      summary: Get AC switch total data
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: AC switch total data
+
+  # ============ CHARGE PILE ============
+  /api/v1/chargePiles:
+    get:
+      tags: [Charge Pile]
+      summary: List charge piles
+      responses:
+        '200':
+          description: Charge pile list
+
+  /api/v1/chargePiles/count:
+    get:
+      tags: [Charge Pile]
+      summary: Count charge piles
+      responses:
+        '200':
+          description: Charge pile count
+
+  /api/v1/chargePile/{id}/alias:
+    post:
+      tags: [Charge Pile]
+      summary: Set charge pile alias
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Alias set
+
+  /api/v1/chargePile/log:
+    get:
+      tags: [Charge Pile]
+      summary: Get charge pile log
+      responses:
+        '200':
+          description: Charge pile log
+
+  /api/v1/chargePile/events:
+    get:
+      tags: [Charge Pile]
+      summary: Get charge pile events
+      responses:
+        '200':
+          description: Charge pile events
+
+  # ============ SMART RULES ============
+  /api/v1/smart/rule:
+    post:
+      tags: [Smart Rules]
+      summary: Create smart rule
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Rule created
+
+  /api/v1/smart/rule/{id}/enable:
+    post:
+      tags: [Smart Rules]
+      summary: Enable/disable smart rule
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Rule toggled
+
+  /api/v1/smart/rule/{id}/delete:
+    post:
+      tags: [Smart Rules]
+      summary: Delete smart rule
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Rule deleted
+
+  /api/v1/smart/rule/plant:
+    get:
+      tags: [Smart Rules]
+      summary: Get plant smart rules
+      responses:
+        '200':
+          description: Plant smart rules
+
+  /api/v1/smart/realtimePrice/day:
+    get:
+      tags: [Smart Rules]
+      summary: Get realtime energy pricing for day
+      parameters:
+        - name: date
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Day pricing data
+
+  /api/v1/octopus/region:
+    get:
+      tags: [Smart Rules]
+      summary: Get Octopus Energy region
+      responses:
+        '200':
+          description: Octopus region
+
+  # ============ FIRMWARE ============
+  /api/v1/inverter/upgrade/{sn}/check:
+    get:
+      tags: [Firmware]
+      summary: Check for inverter firmware update
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Update availability
+
+  /api/v1/inverter/{sn}/upgrade:
+    post:
+      tags: [Firmware]
+      summary: Start inverter firmware upgrade
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: firmId
+          in: query
+          required: true
+          schema:
+            type: integer
+        - name: method
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Upgrade started
+
+  /api/v1/inverter/{sn}/upgrade/progress:
+    get:
+      tags: [Firmware]
+      summary: Get firmware upgrade progress
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Upgrade progress
+
+  /api/v1/inverter/{sn}/cutUpgrade:
+    post:
+      tags: [Firmware]
+      summary: Cancel firmware upgrade
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Upgrade cancelled
+
+  /api/v1/version/latest:
+    get:
+      tags: [Firmware]
+      summary: Get latest app version
+      parameters:
+        - name: lan
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Latest version info
+
+  # ============ INVERTER CONFIG TEMPLATES ============
+  /api/v1/inverter/configs:
+    get:
+      tags: [Firmware]
+      summary: List inverter configurations
+      responses:
+        '200':
+          description: Config list
+
+  /api/v1/inverter/config/templates:
+    get:
+      tags: [Firmware]
+      summary: List configuration templates
+      responses:
+        '200':
+          description: Template list
+
+  /api/v1/inverter/config/{sn}/save:
+    post:
+      tags: [Firmware]
+      summary: Save current config as template
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Config saved
+
+  /api/v1/inverter/config/{id}/apply:
+    post:
+      tags: [Firmware]
+      summary: Apply saved config to inverter
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Config applied
+
+  /api/v1/inverter/config/{id}/details:
+    get:
+      tags: [Firmware]
+      summary: Get config details
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Config details
+
+  # ============ DICTIONARY ============
+  /api/v1/dict/timezones:
+    get:
+      tags: [Dictionary]
+      summary: List supported timezones
+      responses:
+        '200':
+          description: Timezone list
+
+  /api/v1/dict/currencies:
+    get:
+      tags: [Dictionary]
+      summary: List supported currencies
+      responses:
+        '200':
+          description: Currency list
+
+  /api/v1/dict/plantTypes:
+    get:
+      tags: [Dictionary]
+      summary: List plant types
+      responses:
+        '200':
+          description: Plant type list
+
+  /api/v1/dict/protocols:
+    get:
+      tags: [Dictionary]
+      summary: List communication protocols
+      responses:
+        '200':
+          description: Protocol list
+
+  /api/v1/dict/inverterEquipTypes:
+    get:
+      tags: [Dictionary]
+      summary: List inverter equipment types
+      responses:
+        '200':
+          description: Equipment type list
+
+  # ============ WEATHER ============
+  /api/v1/weather:
+    get:
+      tags: [Weather]
+      summary: Get weather data
+      responses:
+        '200':
+          description: Weather data
+
+  /api/v1/meteorological:
+    get:
+      tags: [Weather]
+      summary: Get meteorological station data
+      responses:
+        '200':
+          description: Meteorological data
+
+  /api/v1/meteorological/{sn}/realtime:
+    get:
+      tags: [Weather]
+      summary: Get meteorological station realtime
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Realtime meteorological data
+
+  /api/v1/meteorological/{sn}/day:
+    get:
+      tags: [Weather]
+      summary: Get meteorological station day data
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: date
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Day meteorological data
+
+  /api/v1/plant/meteorological/{stationId}/realtime:
+    get:
+      tags: [Weather]
+      summary: Get plant meteorological realtime
+      parameters:
+        - name: stationId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Plant meteorological realtime
+
+  # ============ MESSAGES ============
+  /api/v1/messageTd/messages:
+    get:
+      tags: [Events]
+      summary: Get notification messages
+      responses:
+        '200':
+          description: Message list
+
+  /api/v1/messageTd/count:
+    get:
+      tags: [Events]
+      summary: Get unread message count
+      responses:
+        '200':
+          description: Message count
+
+  /api/v1/messageTd/readMessage:
+    post:
+      tags: [Events]
+      summary: Mark message as read
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Message marked
+
+  /api/v1/messageTd/readMessageBatch:
+    post:
+      tags: [Events]
+      summary: Mark multiple messages as read
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Messages marked
+
+  # ============ WORK DATA ============
+  /api/v1/workdata/dynamic:
+    get:
+      tags: [Historical Data]
+      summary: Get dynamic work data
+      responses:
+        '200':
+          description: Dynamic work data
+
+  /api/v1/workdata/dynamic/download:
+    get:
+      tags: [Historical Data]
+      summary: Download dynamic work data
+      responses:
+        '200':
+          description: Work data download
+
+  /api/v1/workdata/event:
+    get:
+      tags: [Events]
+      summary: Get work data events
+      responses:
+        '200':
+          description: Work data events
+
+  /api/v1/workdata/battery/event:
+    get:
+      tags: [Events]
+      summary: Get battery work data events
+      responses:
+        '200':
+          description: Battery work data events
+
+  # ============ INVERTER DEBUG ============
+  /api/v1/inverter/{sn}/debug:
+    post:
+      tags: [Inverters]
+      summary: Enable inverter debug mode
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Debug toggled
+
+  /api/v1/inverter/{sn}/debug/reply:
+    get:
+      tags: [Inverters]
+      summary: Get debug reply data
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Debug reply
+
+  /api/v1/inverter/{sn}/custom/info:
+    get:
+      tags: [Inverters]
+      summary: Get inverter custom info
+      parameters:
+        - name: sn
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Custom info
+
+  /api/v1/inverter/flow/paramExport:
+    post:
+      tags: [Inverters]
+      summary: Export flow parameters
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Parameters exported
+
+  # ============ PLANT LAYOUT ============
+  /api/v1/plant/{plantId}/physical/layout:
+    get:
+      tags: [Plants]
+      summary: Get plant physical layout
+      parameters:
+        - name: plantId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Physical layout
+
+  /api/v1/plant/{plantId}/layout/day:
+    get:
+      tags: [Plants]
+      summary: Get layout day data
+      parameters:
+        - name: plantId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Layout day data
+
+  /api/v1/plant/{plantId}/layout/month:
+    get:
+      tags: [Plants]
+      summary: Get layout month data
+      parameters:
+        - name: plantId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Layout month data
+
+  /api/v1/plant/{plantId}/layout/year:
+    get:
+      tags: [Plants]
+      summary: Get layout year data
+      parameters:
+        - name: plantId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Layout year data
+
+  /api/v1/plant/{plantId}/layout/total:
+    get:
+      tags: [Plants]
+      summary: Get layout total data
+      parameters:
+        - name: plantId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Layout total data
