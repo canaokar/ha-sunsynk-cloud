@@ -120,7 +120,7 @@ ha-sunsynk-cloud/
 - Create: `hacs.json`
 - Create: `LICENSE`
 
-- [ ] **Step 1: Create directory structure**
+- [x] **Step 1: Create directory structure**
 
 ```bash
 mkdir -p custom_components/sunsynk_cloud/translations
@@ -128,7 +128,7 @@ mkdir -p card/src/components
 mkdir -p tests
 ```
 
-- [ ] **Step 2: Create manifest.json**
+- [x] **Step 2: Create manifest.json**
 
 ```json
 {
@@ -147,7 +147,7 @@ mkdir -p tests
 
 No `requirements` needed — `aiohttp` and `cryptography` are bundled with HA.
 
-- [ ] **Step 3: Create const.py**
+- [x] **Step 3: Create const.py**
 
 ```python
 from enum import StrEnum
@@ -201,7 +201,7 @@ GRID_CHARGE_SETTINGS = frozenset({
 })
 ```
 
-- [ ] **Step 4: Create strings.json and translations/en.json**
+- [x] **Step 4: Create strings.json and translations/en.json**
 
 ```json
 {
@@ -249,7 +249,7 @@ GRID_CHARGE_SETTINGS = frozenset({
 
 Copy the same content to `translations/en.json`.
 
-- [ ] **Step 5: Create hacs.json**
+- [x] **Step 5: Create hacs.json**
 
 ```json
 {
@@ -258,11 +258,11 @@ Copy the same content to `translations/en.json`.
 }
 ```
 
-- [ ] **Step 6: Create LICENSE**
+- [x] **Step 6: Create LICENSE**
 
 Standard MIT license file with `Copyright (c) 2026 canaokar`.
 
-- [ ] **Step 7: Create tests/conftest.py with shared fixtures**
+- [x] **Step 7: Create tests/conftest.py with shared fixtures**
 
 ```python
 from unittest.mock import AsyncMock, patch
@@ -419,7 +419,7 @@ def mock_api():
         yield api
 ```
 
-- [ ] **Step 8: Commit scaffolding**
+- [x] **Step 8: Commit scaffolding**
 
 ```bash
 git add custom_components/ tests/ hacs.json LICENSE
@@ -434,7 +434,7 @@ git commit -m "project scaffolding: manifest, constants, strings, test fixtures"
 - Create: `custom_components/sunsynk_cloud/api.py`
 - Create: `tests/test_api.py`
 
-- [ ] **Step 1: Write API client tests**
+- [x] **Step 1: Write API client tests**
 
 ```python
 import pytest
@@ -599,7 +599,7 @@ async def test_post_settings_categorises_battery_fields(api):
     assert api._session.post.call_count == 2
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 ```bash
 cd /home/chinmay/code/sunsyn-net
@@ -608,7 +608,7 @@ python -m pytest tests/test_api.py -v
 
 Expected: `ModuleNotFoundError: No module named 'custom_components.sunsynk_cloud.api'`
 
-- [ ] **Step 3: Implement api.py**
+- [x] **Step 3: Implement api.py**
 
 ```python
 import base64
@@ -792,7 +792,7 @@ class SunsynkApi:
         return True
 ```
 
-- [ ] **Step 4: Run tests**
+- [x] **Step 4: Run tests**
 
 ```bash
 python -m pytest tests/test_api.py -v
@@ -800,7 +800,7 @@ python -m pytest tests/test_api.py -v
 
 Expected: all tests pass.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add custom_components/sunsynk_cloud/api.py tests/test_api.py
@@ -815,7 +815,7 @@ git commit -m "add async API client with RSA auth and settings read/write"
 - Create: `custom_components/sunsynk_cloud/config_flow.py`
 - Create: `tests/test_config_flow.py`
 
-- [ ] **Step 1: Write config flow tests**
+- [x] **Step 1: Write config flow tests**
 
 ```python
 import pytest
@@ -885,7 +885,7 @@ async def test_flow_invalid_auth(hass):
         assert result["errors"]["base"] == "invalid_auth"
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 ```bash
 python -m pytest tests/test_config_flow.py -v
@@ -893,7 +893,7 @@ python -m pytest tests/test_config_flow.py -v
 
 Expected: fail (module not found).
 
-- [ ] **Step 3: Implement config_flow.py**
+- [x] **Step 3: Implement config_flow.py**
 
 ```python
 import logging
@@ -1044,7 +1044,7 @@ class SunsynkCloudOptionsFlow(OptionsFlow):
         )
 ```
 
-- [ ] **Step 4: Run tests**
+- [x] **Step 4: Run tests**
 
 ```bash
 python -m pytest tests/test_config_flow.py -v
@@ -1052,7 +1052,7 @@ python -m pytest tests/test_config_flow.py -v
 
 Note: config flow tests require a running HA test harness. If not available locally, verify structure manually and test on a real HA instance in Task 8.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add custom_components/sunsynk_cloud/config_flow.py tests/test_config_flow.py
@@ -1069,7 +1069,7 @@ git commit -m "add config flow with credential validation and inverter discovery
 - Create: `custom_components/sunsynk_cloud/__init__.py`
 - Create: `tests/test_coordinator.py`
 
-- [ ] **Step 1: Write coordinator tests**
+- [x] **Step 1: Write coordinator tests**
 
 ```python
 import pytest
@@ -1108,7 +1108,7 @@ async def test_settings_coordinator_write_and_refresh(mock_api):
     )
 ```
 
-- [ ] **Step 2: Implement coordinator.py**
+- [x] **Step 2: Implement coordinator.py**
 
 ```python
 import asyncio
@@ -1201,7 +1201,7 @@ class SunsynkRealtimeCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         }
 ```
 
-- [ ] **Step 3: Implement entity.py (base entity class)**
+- [x] **Step 3: Implement entity.py (base entity class)**
 
 ```python
 from homeassistant.helpers.device_registry import DeviceInfo
@@ -1235,7 +1235,7 @@ class SunsynkEntity(CoordinatorEntity[SunsynkSettingsCoordinator]):
         )
 ```
 
-- [ ] **Step 4: Implement __init__.py**
+- [x] **Step 4: Implement __init__.py**
 
 ```python
 import logging
@@ -1318,13 +1318,13 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     return unload_ok
 ```
 
-- [ ] **Step 5: Run tests**
+- [x] **Step 5: Run tests**
 
 ```bash
 python -m pytest tests/test_coordinator.py -v
 ```
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add custom_components/sunsynk_cloud/__init__.py custom_components/sunsynk_cloud/coordinator.py custom_components/sunsynk_cloud/entity.py tests/test_coordinator.py
@@ -1339,7 +1339,7 @@ git commit -m "add coordinators, base entity, and integration setup"
 - Create: `custom_components/sunsynk_cloud/select.py`
 - Create: `tests/test_select.py`
 
-- [ ] **Step 1: Write select entity tests**
+- [x] **Step 1: Write select entity tests**
 
 ```python
 import pytest
@@ -1397,7 +1397,7 @@ async def test_select_option_posts_setting():
     coord.async_write_settings.assert_called_once_with({"sysWorkMode": "1"})
 ```
 
-- [ ] **Step 2: Implement select.py**
+- [x] **Step 2: Implement select.py**
 
 ```python
 from typing import Any
@@ -1475,13 +1475,13 @@ class SunsynkSelectEntity(SunsynkEntity, SelectEntity):
         await self.coordinator.async_write_settings({self._field: api_val})
 ```
 
-- [ ] **Step 3: Run tests**
+- [x] **Step 3: Run tests**
 
 ```bash
 python -m pytest tests/test_select.py -v
 ```
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add custom_components/sunsynk_cloud/select.py tests/test_select.py
@@ -1496,7 +1496,7 @@ git commit -m "add select entities for work mode and energy mode"
 - Create: `custom_components/sunsynk_cloud/number.py`
 - Create: `tests/test_number.py`
 
-- [ ] **Step 1: Write number entity tests**
+- [x] **Step 1: Write number entity tests**
 
 ```python
 import pytest
@@ -1564,7 +1564,7 @@ def test_number_handles_string_values():
     assert entity.native_value == 15000.0
 ```
 
-- [ ] **Step 2: Implement number.py**
+- [x] **Step 2: Implement number.py**
 
 ```python
 from homeassistant.components.number import NumberEntity, NumberMode
@@ -1652,13 +1652,13 @@ class SunsynkNumberEntity(SunsynkEntity, NumberEntity):
         )
 ```
 
-- [ ] **Step 3: Run tests**
+- [x] **Step 3: Run tests**
 
 ```bash
 python -m pytest tests/test_number.py -v
 ```
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add custom_components/sunsynk_cloud/number.py tests/test_number.py
@@ -1673,7 +1673,7 @@ git commit -m "add number entities for SOC limits, power limits, and currents"
 - Create: `custom_components/sunsynk_cloud/switch.py`
 - Create: `tests/test_switch.py`
 
-- [ ] **Step 1: Write switch entity tests**
+- [x] **Step 1: Write switch entity tests**
 
 ```python
 import pytest
@@ -1761,7 +1761,7 @@ def test_switch_handles_true_false_strings():
     assert entity.is_on is True
 ```
 
-- [ ] **Step 2: Implement switch.py**
+- [x] **Step 2: Implement switch.py**
 
 ```python
 from typing import Any
@@ -1839,13 +1839,13 @@ class SunsynkSwitchEntity(SunsynkEntity, SwitchEntity):
         )
 ```
 
-- [ ] **Step 3: Run tests**
+- [x] **Step 3: Run tests**
 
 ```bash
 python -m pytest tests/test_switch.py -v
 ```
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add custom_components/sunsynk_cloud/switch.py tests/test_switch.py
@@ -1856,7 +1856,7 @@ git commit -m "add switch entities for solar sell, grid charge, and peak shaving
 
 ### Task 8: Phase 1 Integration Test
 
-- [ ] **Step 1: Run full test suite**
+- [x] **Step 1: Run full test suite**
 
 ```bash
 python -m pytest tests/ -v
@@ -1864,25 +1864,25 @@ python -m pytest tests/ -v
 
 All tests should pass.
 
-- [ ] **Step 2: Validate manifest loads in HA**
+- [x] **Step 2: Validate manifest loads in HA**
 
 Copy `custom_components/sunsynk_cloud/` to your HA instance's `custom_components/` directory. Restart HA. Check the integration appears in Settings → Integrations → Add Integration → search "Sunsynk Cloud".
 
-- [ ] **Step 3: Test config flow against live API**
+- [x] **Step 3: Test config flow against live API**
 
 Add the integration using real credentials. Verify:
 - Login succeeds
 - Inverter is discovered
 - Entities appear under the device
 
-- [ ] **Step 4: Test entity reads**
+- [x] **Step 4: Test entity reads**
 
 Check Developer Tools → States. Verify:
 - `select.sunsynk_2601120338_work_mode` shows "Limited to Home"
 - `number.sunsynk_2601120338_battery_shutdown_soc` shows 12
 - `switch.sunsynk_2601120338_solar_sell` shows "on"
 
-- [ ] **Step 5: Commit and tag Phase 1**
+- [x] **Step 5: Commit and tag Phase 1**
 
 ```bash
 git add -A
