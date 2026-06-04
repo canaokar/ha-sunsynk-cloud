@@ -3125,7 +3125,7 @@ git tag v0.3.0
 - Modify: `custom_components/sunsynk_cloud/api.py`
 - Modify: `custom_components/sunsynk_cloud/__init__.py`
 
-- [ ] **Step 1: Add exponential backoff to API client**
+- [x] **Step 1: Add exponential backoff to API client**
 
 Add to `api.py`:
 
@@ -3149,7 +3149,7 @@ async def _request_with_retry(self, method, path, **kwargs):
 
 Update `post_settings` to use `_request_with_retry` for write operations.
 
-- [ ] **Step 2: Add re-auth trigger to __init__.py**
+- [x] **Step 2: Add re-auth trigger to __init__.py**
 
 In `async_setup_entry`, wrap the authenticate call to trigger re-auth on failure:
 
@@ -3163,7 +3163,7 @@ except AuthError as err:
     raise ConfigEntryAuthFailed("Login failed — check credentials") from err
 ```
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add custom_components/sunsynk_cloud/api.py custom_components/sunsynk_cloud/__init__.py
@@ -3177,7 +3177,7 @@ git commit -m "add retry with backoff for writes and re-auth on expired credenti
 **Files:**
 - Create: `README.md`
 
-- [ ] **Step 1: Write README**
+- [x] **Step 1: Write README**
 
 Include:
 - Project name and one-line description
@@ -3190,7 +3190,7 @@ Include:
 - Contributing section
 - License
 
-- [ ] **Step 2: Final test pass**
+- [x] **Step 2: Final test pass**
 
 ```bash
 python -m pytest tests/ -v
@@ -3199,7 +3199,7 @@ cd card && npm run build
 
 All tests pass, card builds clean.
 
-- [ ] **Step 3: Final commit and tag**
+- [x] **Step 3: Final commit and tag**
 
 ```bash
 git add -A
@@ -3207,7 +3207,7 @@ git commit -m "add README, finalize for v1.0.0 release"
 git tag v1.0.0
 ```
 
-- [ ] **Step 4: Push to GitHub**
+- [x] **Step 4: Push to GitHub**
 
 ```bash
 git push -u origin main --tags
