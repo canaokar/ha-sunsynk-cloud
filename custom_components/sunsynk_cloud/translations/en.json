@@ -15,6 +15,13 @@
         "data": {
           "inverter_sns": "Inverters"
         }
+      },
+      "reauth_confirm": {
+        "title": "Re-authenticate Sunsynk Cloud",
+        "description": "Your credentials have expired. Please enter your new password.",
+        "data": {
+          "password": "Password"
+        }
       }
     },
     "error": {

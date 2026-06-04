@@ -1,11 +1,11 @@
 import logging
 from datetime import timedelta
 
-import aiohttp
-
+from homeassistant.components.http import StaticPathConfig
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .api import SunsynkApi, AuthError
 from .const import (
@@ -21,13 +21,12 @@ PLATFORMS = ["select", "number", "switch", "sensor", "time"]
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    session = aiohttp.ClientSession()
+    session = async_get_clientsession(hass)
     api = SunsynkApi(session)
 
     try:
         await api.authenticate(entry.data["username"], entry.data["password"])
     except AuthError as err:
-        await session.close()
         raise ConfigEntryAuthFailed(
             "Login failed — check credentials"
         ) from err
@@ -64,18 +63,19 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.data.setdefault(DOMAIN, {})
     hass.data[DOMAIN][entry.entry_id] = {
         "api": api,
-        "session": session,
         "coordinators": coordinators,
     }
 
     card_path = hass.config.path(
         "custom_components/sunsynk_cloud/card/sunsynk-cloud-card.js"
     )
-    hass.http.register_static_path(
-        "/sunsynk_cloud/sunsynk-cloud-card.js",
-        card_path,
-        cache_headers=True,
-    )
+    await hass.http.async_register_static_paths([
+        StaticPathConfig(
+            "/sunsynk_cloud/sunsynk-cloud-card.js",
+            card_path,
+            True,
+        )
+    ])
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
@@ -84,6 +84,5 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unload_ok:
-        data = hass.data[DOMAIN].pop(entry.entry_id)
-        await data["session"].close()
+        hass.data[DOMAIN].pop(entry.entry_id)
     return unload_ok

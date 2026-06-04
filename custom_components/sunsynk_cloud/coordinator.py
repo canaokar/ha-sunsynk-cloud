@@ -39,7 +39,7 @@ class SunsynkSettingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             self._pending_writes.update(settings)
             if self._debounce_task and not self._debounce_task.done():
                 self._debounce_task.cancel()
-            self._debounce_task = asyncio.ensure_future(
+            self._debounce_task = self.hass.async_create_task(
                 self._flush_writes()
             )
 

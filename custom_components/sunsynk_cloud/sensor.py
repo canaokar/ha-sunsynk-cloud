@@ -5,6 +5,7 @@ from homeassistant.components.sensor import (
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
@@ -85,16 +86,15 @@ class SunsynkRealtimeSensor(CoordinatorEntity[SunsynkRealtimeCoordinator], Senso
         self._attr_icon = icon
 
     @property
-    def device_info(self):
-        from .const import DOMAIN
+    def device_info(self) -> DeviceInfo:
         version = self._inverter.get("version", {})
-        return {
-            "identifiers": {(DOMAIN, self._sn)},
-            "name": self._inverter.get("alias", self._sn),
-            "manufacturer": self._inverter.get("brand", "Sunsynk"),
-            "model": f"{self._inverter.get('ratePower', 0) // 1000}kW Hybrid",
-            "sw_version": version.get("softVer"),
-        }
+        return DeviceInfo(
+            identifiers={(DOMAIN, self._sn)},
+            name=self._inverter.get("alias", self._sn),
+            manufacturer=self._inverter.get("brand", "Sunsynk"),
+            model=f"{self._inverter.get('ratePower', 0) // 1000}kW Hybrid",
+            sw_version=version.get("softVer"),
+        )
 
     @property
     def native_value(self) -> float | None:
