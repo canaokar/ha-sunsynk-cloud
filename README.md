@@ -1,5 +1,7 @@
 # Sunsynk Cloud for Home Assistant
 
+> **Disclaimer:** This is an unofficial, community-built integration. It is not affiliated with, endorsed by, or supported by Sunsynk, Deye, or any of their subsidiaries. Use at your own risk. Sunsynk may change or restrict their cloud API at any time without notice.
+
 A HACS custom integration that connects Home Assistant to the [Sunsynk cloud API](https://www.sunsynk.net) for reading and writing inverter settings. Includes a custom Lovelace card with a visual timer editor.
 
 This integration supplements the [kellerza add-on](https://github.com/kellerza/sunsynk) (which provides local Modbus reads) by adding cloud-based settings control. It does not replace kellerza — both can run side by side.
