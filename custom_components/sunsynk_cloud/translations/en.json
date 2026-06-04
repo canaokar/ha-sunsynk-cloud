@@ -1,0 +1,41 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Sunsynk Cloud Login",
+        "description": "Enter your sunsynk.net credentials.",
+        "data": {
+          "username": "Email",
+          "password": "Password"
+        }
+      },
+      "select_inverters": {
+        "title": "Select Inverters",
+        "description": "Choose which inverters to add.",
+        "data": {
+          "inverter_sns": "Inverters"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Cannot connect to Sunsynk API",
+      "invalid_auth": "Invalid email or password",
+      "unknown": "Unexpected error"
+    },
+    "abort": {
+      "already_configured": "This account is already configured"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Sunsynk Cloud Options",
+        "data": {
+          "settings_interval": "Settings poll interval (seconds)",
+          "realtime_interval": "Realtime poll interval (seconds)",
+          "enable_realtime": "Enable realtime sensors"
+        }
+      }
+    }
+  }
+}
