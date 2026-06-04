@@ -2348,7 +2348,7 @@ git tag v0.2.0
 - Create: `card/tsconfig.json`
 - Create: `card/rollup.config.mjs`
 
-- [ ] **Step 1: Create package.json**
+- [x] **Step 1: Create package.json**
 
 ```json
 {
@@ -2367,14 +2367,14 @@ git tag v0.2.0
     "@rollup/plugin-node-resolve": "^15.2.0",
     "@rollup/plugin-typescript": "^11.1.0",
     "rollup": "^4.9.0",
-    "rollup-plugin-terser": "^7.0.0",
+    "@rollup/plugin-terser": "^0.4.0",
     "typescript": "^5.3.0",
     "tslib": "^2.6.0"
   }
 }
 ```
 
-- [ ] **Step 2: Create tsconfig.json**
+- [x] **Step 2: Create tsconfig.json**
 
 ```json
 {
@@ -2396,12 +2396,12 @@ git tag v0.2.0
 }
 ```
 
-- [ ] **Step 3: Create rollup.config.mjs**
+- [x] **Step 3: Create rollup.config.mjs**
 
 ```javascript
 import resolve from "@rollup/plugin-node-resolve";
 import typescript from "@rollup/plugin-typescript";
-import { terser } from "rollup-plugin-terser";
+import terser from "@rollup/plugin-terser";
 
 export default {
   input: "src/sunsynk-cloud-card.ts",
@@ -2413,7 +2413,7 @@ export default {
 };
 ```
 
-- [ ] **Step 4: Install and test build**
+- [x] **Step 4: Install and test build**
 
 ```bash
 cd card && npm install && npm run build
@@ -2421,7 +2421,7 @@ cd card && npm install && npm run build
 
 Expected: creates `custom_components/sunsynk_cloud/card/sunsynk-cloud-card.js`
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add card/package.json card/tsconfig.json card/rollup.config.mjs
@@ -2437,7 +2437,7 @@ git commit -m "set up card build pipeline with rollup, typescript, and lit"
 - Create: `card/src/styles.ts`
 - Create: `card/src/sunsynk-cloud-card.ts`
 
-- [ ] **Step 1: Create types.ts**
+- [x] **Step 1: Create types.ts**
 
 ```typescript
 export interface SunsynkCardConfig {
@@ -2475,7 +2475,7 @@ export interface HomeAssistant {
 }
 ```
 
-- [ ] **Step 2: Create styles.ts**
+- [x] **Step 2: Create styles.ts**
 
 ```typescript
 import { css } from "lit";
@@ -2677,7 +2677,7 @@ export const cardStyles = css`
 `;
 ```
 
-- [ ] **Step 3: Create main card entry point sunsynk-cloud-card.ts**
+- [x] **Step 3: Create main card entry point sunsynk-cloud-card.ts**
 
 ```typescript
 import { LitElement, html, nothing, PropertyValues } from "lit";
@@ -3048,7 +3048,7 @@ export class SunsynkCloudCard extends LitElement {
 });
 ```
 
-- [ ] **Step 4: Build the card**
+- [x] **Step 4: Build the card**
 
 ```bash
 cd card && npm run build
@@ -3056,7 +3056,7 @@ cd card && npm run build
 
 Verify `custom_components/sunsynk_cloud/card/sunsynk-cloud-card.js` exists.
 
-- [ ] **Step 5: Update __init__.py to register the card**
+- [x] **Step 5: Update __init__.py to register the card**
 
 Add to `async_setup_entry` in `__init__.py`, before the platform setup:
 
@@ -3071,7 +3071,7 @@ hass.http.register_static_path(
 )
 ```
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add card/ custom_components/sunsynk_cloud/card/ custom_components/sunsynk_cloud/__init__.py
@@ -3082,7 +3082,7 @@ git commit -m "add custom Lovelace card with power flow display, settings contro
 
 ### Task 14: Phase 3 Card Testing
 
-- [ ] **Step 1: Deploy and test card in HA**
+- [x] **Step 1: Deploy and test card in HA**
 
 Add to a Lovelace dashboard:
 ```yaml
@@ -3097,7 +3097,7 @@ Verify:
 - Battery sliders move and write values
 - Grid section toggles work
 
-- [ ] **Step 2: Tag Phase 3**
+- [x] **Step 2: Tag Phase 3**
 
 ```bash
 git add -A

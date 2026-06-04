@@ -66,6 +66,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         "coordinators": coordinators,
     }
 
+    card_path = hass.config.path(
+        "custom_components/sunsynk_cloud/card/sunsynk-cloud-card.js"
+    )
+    hass.http.register_static_path(
+        "/sunsynk_cloud/sunsynk-cloud-card.js",
+        card_path,
+        cache_headers=True,
+    )
+
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
 
